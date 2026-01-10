@@ -14,15 +14,15 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Copier les requirements
+# Copier les requirements depuis la racine Backend
 COPY requirements.txt .
 
 # Installer les dépendances Python
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copier les scripts Python
-COPY ai_analysis_server.py .
-COPY tree_analysis_service.py .
+# Copier les scripts Python depuis src/services
+COPY src/services/ai_analysis_server.py .
+COPY src/services/tree_analysis_service.py .
 
 # Créer le dossier pour les modèles
 RUN mkdir -p models uploads

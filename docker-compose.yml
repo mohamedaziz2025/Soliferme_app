@@ -27,8 +27,8 @@ services:
   # Service AI Python (Flask)
   ai-service:
     build:
-      context: ./Backend/src/services
-      dockerfile: Dockerfile
+      context: ./Backend
+      dockerfile: src/services/Dockerfile
     container_name: soliferme-ai-service
     restart: unless-stopped
     environment:
