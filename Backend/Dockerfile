@@ -10,8 +10,8 @@ RUN apk add --no-cache curl
 # Copier les fichiers de dépendances
 COPY package*.json ./
 
-# Installer les dépendances avec prise en charge de bcryptjs
-RUN npm ci && npm cache clean --force
+# Installer les dépendances
+RUN npm install --production=false && npm cache clean --force
 
 # Copier les fichiers sources
 COPY . .
