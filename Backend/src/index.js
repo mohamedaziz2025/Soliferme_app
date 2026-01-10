@@ -102,7 +102,7 @@ async function initializeAdmin() {
 }
 
 // MongoDB connection
-mongoose.connect('mongodb://127.0.0.1:27017/fruitytrack?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.3.2', {
+mongoose.connect('mongodb+srv://rfeki14_db_user:J69IGsnJOXCefkmY@cluster0.jpagfrz.mongodb.net/?appName=Cluster0', {
   useNewUrlParser: true,
   useUnifiedTopology: true
 })

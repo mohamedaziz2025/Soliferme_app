@@ -3,7 +3,8 @@ FROM python:3.9-slim
 
 # Installer les dépendances système
 RUN apt-get update && apt-get install -y \
-    libgl1-mesa-glx \
+    libglx-mesa0 \
+    libgl1 \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
