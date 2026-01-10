@@ -1,0 +1,93 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.docker
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Uploads
+uploads/*
+!uploads/.gitkeep
+Backend/uploads/*
+!Backend/uploads/.gitkeep
+
+# AI Models (trop gros pour git)
+*.pt
+*.pth
+*.onnx
+*.h5
+models/*.pt
+Backend/src/services/models/*.pt
+
+# Database
+*.db
+*.sqlite
+data/
+
+# Docker
+docker-compose.override.yml
+
+# Flutter
+app2/.dart_tool/
+app2/.flutter-plugins
+app2/.flutter-plugins-dependencies
+app2/.packages
+app2/.pub-cache/
+app2/.pub/
+app2/build/
+app2/.flutter_tool_state
+app2/ios/Pods/
+app2/ios/.symlinks/
+app2/ios/Flutter/Flutter.framework
+app2/ios/Flutter/Flutter.podspec
+app2/.ios/
+app2/.android/
+
+# Coverage
+coverage/
+.nyc_output/
+*.coverage
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Certificates
+*.pem
+*.key
+*.crt
+certs/
