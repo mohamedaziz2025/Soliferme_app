@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/app_config.dart';
 import './auth_service.dart';
 import './sync_service.dart';
 import './network_service.dart';
@@ -12,10 +13,8 @@ class ApiService {
   factory ApiService() => _instance;
   ApiService._internal();
 
-  // Use your actual backend URL here
-  static const String baseUrl = kIsWeb 
-    ? 'http://localhost:5000/api'
-    : 'http://10.0.2.2:5000/api';  // For Android emulator
+  // Use hosted backend URL
+  static String get baseUrl => AppConfig.apiBaseUrl;
 
   final SyncService _syncService = SyncService();
   final NetworkService _networkService = NetworkService();

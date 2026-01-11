@@ -3,13 +3,13 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:crypto/crypto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/app_config.dart';
 import './api_exception.dart';
 import './secure_storage_service.dart';
 
 class AuthService extends ChangeNotifier {
-  static const String baseUrl = kIsWeb 
-    ? 'http://localhost:5000/api'
-    : 'http://10.0.2.2:5000/api';  // For Android emulator
+  // Use hosted backend URL
+  static String get baseUrl => AppConfig.apiBaseUrl;
     
   static const String tokenKey = 'auth_token';
   static const String userKey = 'user_data';
