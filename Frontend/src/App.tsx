@@ -20,6 +20,8 @@ import UserManagement from './pages/UserManagement_Modern';
 import ProfilePage from './pages/ProfilePage_Modern';
 import AnalysisHistory from './pages/AnalysisHistory';
 import TreeAnalysisReports from './pages/TreeAnalysisReports';
+import AdminTreeManagement from './pages/AdminTreeManagement';
+import TreeAnalysisScreen from './pages/TreeAnalysisScreen';
 
 const theme = createTheme({
   palette: {
@@ -341,6 +343,22 @@ const App = () => {
               element={
                 <PrivateRoute isAuthenticated={isAuthenticated}>
                   <TreeAnalysisReports />
+                </PrivateRoute>
+              } 
+            />
+            <Route 
+              path="/admin/trees" 
+              element={
+                <PrivateRoute isAuthenticated={isAuthenticated} requiredRole="admin">
+                  <AdminTreeManagement />
+                </PrivateRoute>
+              } 
+            />
+            <Route 
+              path="/analysis/scan" 
+              element={
+                <PrivateRoute isAuthenticated={isAuthenticated}>
+                  <TreeAnalysisScreen />
                 </PrivateRoute>
               } 
             />
