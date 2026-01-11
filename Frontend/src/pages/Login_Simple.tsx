@@ -47,7 +47,7 @@ const Login = ({ onLogin }: LoginProps) => {
     }
 
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/login', {
+      const response = await axios.post('http://72.62.71.97:35000/api/auth/login', {
         email,
         password,
       });

@@ -114,7 +114,7 @@ const AnalysisHistoryPage: React.FC = () => {
       if (severity) queryParams.append('severity', severity);
 
       const response = await fetch(
-        `http://localhost:5000/api/analysis/history?${queryParams.toString()}`,
+        `http://72.62.71.97:35000/api/analysis/history?${queryParams.toString()}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

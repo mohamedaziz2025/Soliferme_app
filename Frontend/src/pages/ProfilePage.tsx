@@ -203,7 +203,7 @@ const ProfilePage = () => {
         return;
       }
 
-      const response = await axios.get('http://localhost:5000/api/auth/profile', {
+      const response = await axios.get('http://72.62.71.97:35000/api/auth/profile', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setProfile(response.data);
@@ -281,7 +281,7 @@ const ProfilePage = () => {
       };
 
       await axios.put(
-        'http://localhost:5000/api/auth/profile',
+        'http://72.62.71.97:35000/api/auth/profile',
         updateData,
         { headers: { Authorization: `Bearer ${token}` } }
       );

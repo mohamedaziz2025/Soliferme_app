@@ -136,11 +136,11 @@ const TreeMap = () => {
       try {
         setLoading(true);
         const token = localStorage.getItem('token');
-        let url = 'http://localhost:5000/api/trees';
+        let url = 'http://72.62.71.97:35000/api/trees';
         
         // If user is not admin, fetch only their trees
         if (userRole !== 'admin' && userEmail) {
-          url = `http://localhost:5000/api/trees/owner/${encodeURIComponent(userEmail)}`;
+          url = `http://72.62.71.97:35000/api/trees/owner/${encodeURIComponent(userEmail)}`;
         }
 
         const response = await axios.get(url, {
@@ -175,11 +175,11 @@ const TreeMap = () => {
       try {
         setLoading(true);
         const token = localStorage.getItem('token');
-        let url = 'http://localhost:5000/api/trees';
+        let url = 'http://72.62.71.97:35000/api/trees';
         
         // If user is not admin, fetch only their trees
         if (userRole !== 'admin' && userEmail) {
-          url = `http://localhost:5000/api/trees/owner/${encodeURIComponent(userEmail)}`;
+          url = `http://72.62.71.97:35000/api/trees/owner/${encodeURIComponent(userEmail)}`;
         }
 
         const response = await axios.get(url, {

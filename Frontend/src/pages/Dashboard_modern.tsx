@@ -190,7 +190,7 @@ const Dashboard = () => {
         throw new Error('Token manquant');
       }
 
-      const response = await axios.get('http://localhost:5000/api/dashboard', {
+      const response = await axios.get('http://72.62.71.97:35000/api/dashboard', {
         headers: { Authorization: `Bearer ${token}` }
       });
 

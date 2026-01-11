@@ -119,7 +119,7 @@ const TreeAnalysisReportsPage: React.FC = () => {
       }
 
       // Fetch tree info
-      const treeResponse = await fetch(`http://localhost:5000/api/trees/${treeId}`, {
+      const treeResponse = await fetch(`http://72.62.71.97:35000/api/trees/${treeId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -135,7 +135,7 @@ const TreeAnalysisReportsPage: React.FC = () => {
 
       // Fetch analyses for this tree
       const analysesResponse = await fetch(
-        `http://localhost:5000/api/analysis/tree/${treeId}`,
+        `http://72.62.71.97:35000/api/analysis/tree/${treeId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

@@ -76,7 +76,7 @@ const TreeDetails = () => {
         return;
       }
 
-      const response = await axios.get(`http://localhost:5000/api/trees/${id}`, {
+      const response = await axios.get(`http://72.62.71.97:35000/api/trees/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setTree(response.data);
@@ -116,7 +116,7 @@ const TreeDetails = () => {
       }
 
       await axios.put(
-        `http://localhost:5000/api/trees/${id}/archive`,
+        `http://72.62.71.97:35000/api/trees/${id}/archive`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -145,7 +145,7 @@ const TreeDetails = () => {
       }
 
       await axios.put(
-        `http://localhost:5000/api/trees/${id}/restore`,
+        `http://72.62.71.97:35000/api/trees/${id}/restore`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );

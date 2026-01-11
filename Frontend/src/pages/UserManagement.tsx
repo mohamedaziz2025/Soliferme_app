@@ -230,7 +230,7 @@ const ReassignModal: React.FC<ReassignModalProps> = ({ visible, fromUserId, onCa
 
   const fetchUsers = async () => {
     try {
-      const response = await axios.get<User[]>('http://localhost:5000/api/auth/users');
+      const response = await axios.get<User[]>('http://72.62.71.97:35000/api/auth/users');
       setUsers(response.data.filter((user: User) => user._id !== fromUserId));
     } catch (error) {
       setError('Failed to fetch users');
@@ -245,7 +245,7 @@ const ReassignModal: React.FC<ReassignModalProps> = ({ visible, fromUserId, onCa
     
     try {
       setLoading(true);
-      await axios.post('http://localhost:5000/api/trees/reassign', {
+      await axios.post('http://72.62.71.97:35000/api/trees/reassign', {
         fromUserId,
         toUserId: selectedUserId
       });
@@ -431,7 +431,7 @@ const UserManagement = () => {
         return;
       }
 
-      const response = await axios.get('http://localhost:5000/api/auth/users', {
+      const response = await axios.get('http://72.62.71.97:35000/api/auth/users', {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -439,7 +439,7 @@ const UserManagement = () => {
       const usersWithTrees = await Promise.all(response.data.map(async (user: User) => {
         try {
           const treesResponse = await axios.get(
-            `http://localhost:5000/api/trees/owner/${encodeURIComponent(user.email)}`,
+            `http://72.62.71.97:35000/api/trees/owner/${encodeURIComponent(user.email)}`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
           return { ...user, trees: treesResponse.data };
@@ -503,7 +503,7 @@ const UserManagement = () => {
 
       if (editUser) {
         await axios.put(
-          `http://localhost:5000/api/auth/users/${editUser._id}/role`,
+          `http://72.62.71.97:35000/api/auth/users/${editUser._id}/role`,
           { role: formData.role },
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -513,7 +513,7 @@ const UserManagement = () => {
           return;
         }
         await axios.post(
-          'http://localhost:5000/api/auth/users',
+          'http://72.62.71.97:35000/api/auth/users',
           formData,
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -569,7 +569,7 @@ const UserManagement = () => {
       }
 
       await axios.put(
-        `http://localhost:5000/api/auth/users/${userId}/archive`,
+        `http://72.62.71.97:35000/api/auth/users/${userId}/archive`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -593,7 +593,7 @@ const UserManagement = () => {
 
   const handleReassignSuccess = async () => {
     try {
-      await axios.delete(`http://localhost:5000/api/auth/users/${selectedUserId}`);
+      await axios.delete(`http://72.62.71.97:35000/api/auth/users/${selectedUserId}`);
       message.success('User deleted and trees reassigned successfully');
       setReassignModalVisible(false);
       fetchUsers(); // Refresh user list

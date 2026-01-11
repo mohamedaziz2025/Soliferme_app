@@ -185,9 +185,9 @@ const TreeList = () => {
         return;
       }
 
-      let url = 'http://localhost:5000/api/trees';
+      let url = 'http://72.62.71.97:35000/api/trees';
       if (userRole !== 'admin') {
-        url = `http://localhost:5000/api/trees/owner/${encodeURIComponent(userEmail)}`;
+        url = `http://72.62.71.97:35000/api/trees/owner/${encodeURIComponent(userEmail)}`;
       }
 
       if (showArchived && userRole === 'admin') {

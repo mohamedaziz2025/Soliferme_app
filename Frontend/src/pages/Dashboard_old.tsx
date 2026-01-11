@@ -101,10 +101,10 @@ const Dashboard = () => {
       try {
         const token = localStorage.getItem('token');
         const [treesResponse, healthResponse] = await Promise.all([
-          axios.get('http://localhost:5000/api/trees/stats', {
+          axios.get('http://72.62.71.97:35000/api/trees/stats', {
             headers: { Authorization: `Bearer ${token}` }
           }),
-          axios.get('http://localhost:5000/api/trees/health-distribution', {
+          axios.get('http://72.62.71.97:35000/api/trees/health-distribution', {
             headers: { Authorization: `Bearer ${token}` }
           })
         ]);
@@ -123,7 +123,7 @@ const Dashboard = () => {
         // Fetch platform stats for admin users
         if (userRole === 'admin') {
           try {
-            const platformResponse = await axios.get('http://localhost:5000/api/platform/stats', {
+            const platformResponse = await axios.get('http://72.62.71.97:35000/api/platform/stats', {
               headers: { Authorization: `Bearer ${token}` }
             });
             platformStats = platformResponse.data;
