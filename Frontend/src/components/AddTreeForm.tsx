@@ -76,7 +76,7 @@ const AddTreeForm: React.FC<AddTreeFormProps> = ({ onTreeAdded }) => {
     try {
       const token = localStorage.getItem('token');
       await axios.post(
-        'http://backend:5000/api/trees',
+        'http://72.62.71.97:35000/api/trees',
         {
           ...formData,
           location: {

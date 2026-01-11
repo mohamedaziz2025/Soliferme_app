@@ -82,7 +82,7 @@ const EditTreeForm: React.FC<EditTreeFormProps> = ({ treeId, onTreeUpdated }) =>
         throw new Error('No authentication token found');
       }
 
-      const response = await axios.get(`http://backend:5000/api/trees/${treeId}`, {
+      const response = await axios.get(`http://72.62.71.97:35000/api/trees/${treeId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -126,7 +126,7 @@ const EditTreeForm: React.FC<EditTreeFormProps> = ({ treeId, onTreeUpdated }) =>
       }
 
       await axios.put(
-        `http://backend:5000/api/trees/${treeId}`,
+        `http://72.62.71.97:35000/api/trees/${treeId}`,
         formData,
         {
           headers: { Authorization: `Bearer ${token}` }
