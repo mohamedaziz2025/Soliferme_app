@@ -28,9 +28,11 @@ const app = express();
 // Middleware
 // Security middlewares
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' ? 'https://votre-domaine.com' : '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: '*', // Accepter toutes les origines (mobile app, web, etc.)
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: true,
+  optionsSuccessStatus: 200
 }));
 app.use(limiter);
 app.use(securityMiddleware);
