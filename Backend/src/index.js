@@ -102,7 +102,7 @@ async function initializeAdmin() {
 }
 
 // MongoDB connection
-const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://rfeki14_db_user:J69IGsnJOXCefkmY@cluster0.jpagfrz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://rfeki14_db_user:J69IGsnJOXCefkmY@cluster0.bxno01m.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
 
 console.log('🔌 Connecting to MongoDB Atlas...');
 
