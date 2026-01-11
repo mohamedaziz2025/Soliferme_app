@@ -37,7 +37,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=5000
-      - MONGODB_URI=mongodb+srv://rfeki14_db_user:J69IGsnJOXCefkmY@cluster0.jpagfrz.mongodb.net/?appName=Cluster0
+      - MONGODB_URI=mongodb+srv://rfeki14_db_user:J69IGsnJOXCefkmY@cluster0.jpagfrz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
       - JWT_SECRET=votre_secret_jwt_super_securise_2026
       - AI_SERVICE_URL=http://ai-service:5001
       - CORS_ORIGIN=http://localhost:3000
@@ -55,8 +55,8 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 40s
+      retries: 5
+      start_period: 90s
 
   # Frontend React (Nginx)
   frontend:

@@ -102,15 +102,40 @@ async function initializeAdmin() {
 }
 
 // MongoDB connection
-mongoose.connect('mongodb+srv://rfeki14_db_user:J69IGsnJOXCefkmY@cluster0.jpagfrz.mongodb.net/?appName=Cluster0', {
+const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://rfeki14_db_user:J69IGsnJOXCefkmY@cluster0.jpagfrz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+
+console.log('🔌 Connecting to MongoDB Atlas...');
+
+mongoose.connect(mongoUri, {
   useNewUrlParser: true,
-  useUnifiedTopology: true
+  useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 60000,  // 60 secondes pour Atlas
+  connectTimeoutMS: 60000,
+  socketTimeoutMS: 60000,
+  retryWrites: true,
+  maxPoolSize: 10
 })
 .then(() => {
-  console.log('Connected to MongoDB');
+  console.log('✅ Connected to MongoDB Atlas');
   initializeAdmin(); // Initialise l'admin après la connexion
 })
-.catch(err => console.error('MongoDB connection error:', err));
+.catch(err => {
+  console.error('❌ MongoDB connection error:', err.message);
+  console.log('⏳ Will retry connection in background...');
+});
+
+// Gestion des événements de connexion
+mongoose.connection.on('connected', () => {
+  console.log('✅ Mongoose connected to MongoDB');
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('⚠️  Mongoose disconnected from MongoDB');
+});
+
+mongoose.connection.on('error', (err) => {
+  console.error('❌ Mongoose connection error:', err.message);
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {
