@@ -236,9 +236,11 @@ const createAnalysisWithGPSAndAI = async (req, res) => {
 
   } catch (error) {
     console.error('❌ Erreur lors de la création de l\'analyse:', error);
+    console.error('Stack trace:', error.stack);
     res.status(500).json({ 
       message: 'Erreur lors de la création de l\'analyse', 
-      error: error.message 
+      error: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };
