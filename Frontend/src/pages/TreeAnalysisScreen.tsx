@@ -203,8 +203,17 @@ const TreeAnalysisScreen: React.FC = () => {
       const token = localStorage.getItem('token');
       const formData = new FormData();
       formData.append('image', selectedImage);
-      formData.append('latitude', gpsLocation.latitude.toString());
-      formData.append('longitude', gpsLocation.longitude.toString());
+      
+      // Envoyer les données GPS au format attendu par le backend
+      formData.append('gpsData', JSON.stringify({
+        latitude: gpsLocation.latitude,
+        longitude: gpsLocation.longitude,
+        accuracy: gpsLocation.accuracy || 0
+      }));
+      
+      // Le type d'arbre sera déterminé par l'IA, on envoie une valeur par défaut
+      formData.append('treeType', 'Unknown');
+      
       if (notes) {
         formData.append('notes', notes);
       }
