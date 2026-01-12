@@ -40,4 +40,21 @@ class PermissionService {
       return await Permission.notification.isGranted;
     }
   }
+
+  Future<bool> checkLocationPermission() async {
+    if (kIsWeb) {
+      return true;
+    } else {
+      return await Permission.location.isGranted;
+    }
+  }
+
+  Future<bool> requestLocationPermission() async {
+    if (kIsWeb) {
+      return true;
+    } else {
+      final status = await Permission.location.request();
+      return status.isGranted;
+    }
+  }
 }

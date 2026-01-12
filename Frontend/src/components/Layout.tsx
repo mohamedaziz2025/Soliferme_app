@@ -123,7 +123,7 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
         <NavButton
           key={item.text}
           color="inherit"
-          component={RouterLink}
+          component={RouterLink as any}
           to={item.path}
           startIcon={item.icon}
           sx={{ 
@@ -167,7 +167,7 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
             {adminMenuItems.map((item) => (
               <MenuItem 
                 key={item.text}
-                component={RouterLink} 
+                component={RouterLink as any} 
                 to={item.path} 
                 onClick={handleClose}
                 selected={isActivePath(item.path)}
@@ -216,7 +216,7 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
         {menuItems.map((item) => (
           <ListItem key={item.text} disablePadding>
             <ListItemButton
-              component={RouterLink}
+              component={RouterLink as any}
               to={item.path}
               onClick={toggleDrawer}
               selected={isActivePath(item.path)}
@@ -269,7 +269,7 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
                 {adminMenuItems.map((item) => (
                   <ListItem key={item.text} disablePadding>
                     <ListItemButton
-                      component={RouterLink}
+                      component={RouterLink as any}
                       to={item.path}
                       onClick={toggleDrawer}
                       selected={isActivePath(item.path)}
@@ -304,7 +304,7 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
         <Divider sx={{ my: 1 }} />
         <ListItem disablePadding>
           <ListItemButton
-            component={RouterLink}
+            component={RouterLink as any}
             to="/profile"
             onClick={toggleDrawer}
             selected={isActivePath('/profile')}
@@ -334,7 +334,7 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
         <Toolbar sx={{ justifyContent: 'space-between' }}>
           <Typography 
             variant="h6" 
-            component={RouterLink}
+            component={RouterLink as any}
             to="/"
             sx={{ 
               flexGrow: 0,
@@ -368,7 +368,7 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
             <Box sx={{ display: 'flex', gap: 1 }}>
               <NavButton
                 color="inherit"
-                component={RouterLink}
+                component={RouterLink as any}
                 to="/login"
                 sx={{ 
                   color: isActivePath('/login') 
@@ -380,7 +380,7 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
               </NavButton>
               <NavButton
                 variant="contained"
-                component={RouterLink}
+                component={RouterLink as any}
                 to="/register"
                 sx={{
                   background: 'linear-gradient(45deg, #00e676, #4caf50)',
@@ -433,7 +433,7 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
             }
           }}
         >
-          <MenuItem component={RouterLink} to="/profile" onClick={handleClose}>
+          <MenuItem component={RouterLink as any} to="/profile" onClick={handleClose}>
             <ListItemIcon>
               <Person fontSize="small" />
             </ListItemIcon>

@@ -108,7 +108,7 @@ class MyApp extends StatelessWidget {
       ),
       
       // Glassmorphism Card Theme
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 0,
         color: const Color(0xFF1A1A1A).withOpacity(0.6),
         shape: RoundedRectangleBorder(
@@ -334,7 +334,7 @@ class MyApp extends StatelessWidget {
       ),
       
       // Futuristic TabBar Theme
-      tabBarTheme: const TabBarTheme(
+      tabBarTheme: const TabBarThemeData(
         indicator: UnderlineTabIndicator(
           borderSide: BorderSide(
             color: Color(0xFF00E676),
