@@ -54,12 +54,23 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 // Create analysis with GPS-based tree matching and AI analysis
 const createAnalysisWithGPSAndAI = async (req, res) => {
   try {
-    const {
+    let {
       treeType,
       gpsData,
       measurements,
       notes
     } = req.body;
+
+    // Parse gpsData if it's a string
+    if (typeof gpsData === 'string') {
+      try {
+        gpsData = JSON.parse(gpsData);
+      } catch (e) {
+        return res.status(400).json({ 
+          message: 'Format GPS invalide' 
+        });
+      }
+    }
 
     if (!treeType || !gpsData || !gpsData.latitude || !gpsData.longitude) {
       return res.status(400).json({ 

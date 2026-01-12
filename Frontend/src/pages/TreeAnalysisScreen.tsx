@@ -100,8 +100,9 @@ const TreeAnalysisScreen: React.FC = () => {
   const [manualGPS, setManualGPS] = useState(false);
   const [manualLatitude, setManualLatitude] = useState('');
   const [manualLongitude, setManualLongitude] = useState('');
+  const [treeType, setTreeType] = useState('');
 
-  const steps = ['Photo', 'Localisation', 'Analyse IA', 'Résultat'];
+  const steps = ['Photo', 'Localisation', 'Type d\'arbre', 'Analyse IA', 'Résultat'];
 
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -196,6 +197,11 @@ const TreeAnalysisScreen: React.FC = () => {
       return;
     }
 
+    if (!treeType || treeType.trim() === '') {
+      setError('Type d\'arbre requis');
+      return;
+    }
+
     setAnalyzing(true);
     setError(null);
 
@@ -203,6 +209,7 @@ const TreeAnalysisScreen: React.FC = () => {
       const token = localStorage.getItem('token');
       const formData = new FormData();
       formData.append('image', selectedImage);
+      formData.append('treeType', treeType.trim());
       
       // Envoyer les données GPS au format attendu par le backend
       formData.append('gpsData', JSON.stringify({
@@ -210,9 +217,6 @@ const TreeAnalysisScreen: React.FC = () => {
         longitude: gpsLocation.longitude,
         accuracy: gpsLocation.accuracy || 0
       }));
-      
-      // Le type d'arbre sera déterminé par l'IA, on envoie une valeur par défaut
-      formData.append('treeType', 'Unknown');
       
       if (notes) {
         formData.append('notes', notes);
@@ -249,6 +253,7 @@ const TreeAnalysisScreen: React.FC = () => {
     setAnalysisResult(null);
     setMatchedTree(null);
     setNotes('');
+    setTreeType('');
     setError(null);
     setResultDialogOpen(false);
   };
@@ -533,6 +538,35 @@ const TreeAnalysisScreen: React.FC = () => {
           </StyledCard>
         </Grid>
 
+        {/* Étape 3: Type d'arbre */}
+        <Grid item xs={12} md={6}>
+          <StyledCard>
+            <Box sx={{ p: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                🌳 Étape 3: Type d'arbre
+              </Typography>
+              
+              <TextField
+                fullWidth
+                label="Type d'arbre *"
+                placeholder="Ex: Manguier, Oranger, Citronnier..."
+                value={treeType}
+                onChange={(e) => setTreeType(e.target.value)}
+                disabled={!gpsLocation}
+                required
+                sx={{ mb: 2 }}
+                helperText={!gpsLocation ? "Complétez d'abord la localisation GPS" : "Entrez le type d'arbre à analyser"}
+              />
+
+              {treeType && (
+                <Alert severity="success" icon={<CheckCircleIcon />}>
+                  Type d'arbre: {treeType}
+                </Alert>
+              )}
+            </Box>
+          </StyledCard>
+        </Grid>
+
         {/* Notes et analyse */}
         <Grid item xs={12}>
           <StyledCard>
@@ -556,7 +590,7 @@ const TreeAnalysisScreen: React.FC = () => {
                   size="large"
                   startIcon={analyzing ? <CircularProgress size={20} color="inherit" /> : <AutoAwesomeIcon />}
                   onClick={analyzeImage}
-                  disabled={!selectedImage || !gpsLocation || analyzing}
+                  disabled={!selectedImage || !gpsLocation || !treeType || analyzing}
                   sx={{
                     borderRadius: 3,
                     px: 4,
