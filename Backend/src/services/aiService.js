@@ -4,7 +4,7 @@ const fs = require('fs');
 
 class AIAnalysisService {
   constructor() {
-    this.aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:5001';
+    this.aiServiceUrl = process.env.AI_SERVICE_URL || 'http://72.62.71.97:5001';
     this.timeout = 30000; // 30 secondes
   }
 
