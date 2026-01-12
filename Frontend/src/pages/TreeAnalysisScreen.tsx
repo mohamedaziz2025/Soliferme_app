@@ -36,6 +36,7 @@ import {
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import axios from 'axios';
+import axiosInstance from '../utils/axiosConfig';
 
 const API_URL = 'http://72.62.71.97:35000/api';
 const AI_SERVICE_URL = 'http://72.62.71.97:35002';
@@ -207,6 +208,18 @@ const TreeAnalysisScreen: React.FC = () => {
 
     try {
       const token = localStorage.getItem('token');
+      
+      // Vérifier si le token existe
+      if (!token) {
+        setError('Session expirée. Veuillez vous reconnecter.');
+        setAnalyzing(false);
+        // Rediriger vers la page de connexion après 2 secondes
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 2000);
+        return;
+      }
+
       const formData = new FormData();
       formData.append('image', selectedImage);
       formData.append('treeType', treeType.trim());
@@ -222,13 +235,14 @@ const TreeAnalysisScreen: React.FC = () => {
         formData.append('notes', notes);
       }
 
+      console.log('Envoi de l\'analyse avec token:', token ? 'présent' : 'absent');
+
       // Appel à l'API d'analyse
-      const response = await axios.post(
-        `${API_URL}/analysis/create-with-ai`,
+      const response = await axiosInstance.post(
+        `/api/analysis/create-with-ai`,
         formData,
         {
           headers: {
-            Authorization: `Bearer ${token}`,
             'Content-Type': 'multipart/form-data',
           },
         }
@@ -239,7 +253,20 @@ const TreeAnalysisScreen: React.FC = () => {
       setActiveStep(3);
       setResultDialogOpen(true);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erreur lors de l\'analyse');
+      console.error('Erreur d\'analyse:', err.response || err);
+      
+      // Gestion spécifique des erreurs 401
+      if (err.response?.status === 401) {
+        setError('Session expirée. Veuillez vous reconnecter.');
+        // Supprimer le token invalide
+        localStorage.removeItem('token');
+        // Rediriger vers la page de connexion après 2 secondes
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 2000);
+      } else {
+        setError(err.response?.data?.message || 'Erreur lors de l\'analyse');
+      }
     } finally {
       setAnalyzing(false);
     }

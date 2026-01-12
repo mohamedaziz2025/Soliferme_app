@@ -22,6 +22,7 @@ import AnalysisHistory from './pages/AnalysisHistory';
 import TreeAnalysisReports from './pages/TreeAnalysisReports';
 import AdminTreeManagement from './pages/AdminTreeManagement';
 import TreeAnalysisScreen from './pages/TreeAnalysisScreen';
+import TokenDebugPage from './pages/TokenDebugPage';
 
 const theme = createTheme({
   palette: {
@@ -359,6 +360,14 @@ const App = () => {
               element={
                 <PrivateRoute isAuthenticated={isAuthenticated}>
                   <TreeAnalysisScreen />
+                </PrivateRoute>
+              } 
+            />
+            <Route 
+              path="/debug-token" 
+              element={
+                <PrivateRoute isAuthenticated={isAuthenticated}>
+                  <TokenDebugPage />
                 </PrivateRoute>
               } 
             />
