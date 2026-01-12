@@ -97,6 +97,9 @@ const TreeAnalysisScreen: React.FC = () => {
   const [notes, setNotes] = useState('');
   const [matchedTree, setMatchedTree] = useState<any>(null);
   const [resultDialogOpen, setResultDialogOpen] = useState(false);
+  const [manualGPS, setManualGPS] = useState(false);
+  const [manualLatitude, setManualLatitude] = useState('');
+  const [manualLongitude, setManualLongitude] = useState('');
 
   const steps = ['Photo', 'Localisation', 'Analyse IA', 'Résultat'];
 
@@ -134,7 +137,21 @@ const TreeAnalysisScreen: React.FC = () => {
         setActiveStep(2);
       },
       (error) => {
-        setError('Erreur lors de la récupération de la position GPS');
+        let errorMessage = 'Erreur lors de la récupération de la position GPS: ';
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage += 'Autorisation refusée. Veuillez autoriser l\'accès à votre position dans les paramètres du navigateur.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage += 'Position indisponible. Vérifiez que votre GPS est activé.';
+            break;
+          case error.TIMEOUT:
+            errorMessage += 'Délai d\'attente dépassé. Réessayez.';
+            break;
+          default:
+            errorMessage += error.message || 'Erreur inconnue';
+        }
+        setError(errorMessage);
         setLoadingGPS(false);
       },
       {
@@ -144,6 +161,34 @@ const TreeAnalysisScreen: React.FC = () => {
       }
     );
   }, []);
+
+  const handleManualGPSSubmit = () => {
+    const lat = parseFloat(manualLatitude);
+    const lng = parseFloat(manualLongitude);
+
+    if (isNaN(lat) || isNaN(lng)) {
+      setError('Veuillez entrer des coordonnées GPS valides');
+      return;
+    }
+
+    if (lat < -90 || lat > 90) {
+      setError('La latitude doit être entre -90 et 90');
+      return;
+    }
+
+    if (lng < -180 || lng > 180) {
+      setError('La longitude doit être entre -180 et 180');
+      return;
+    }
+
+    setGpsLocation({
+      latitude: lat,
+      longitude: lng,
+      accuracy: 0,
+    });
+    setError(null);
+    setActiveStep(2);
+  };
 
   const analyzeImage = async () => {
     if (!selectedImage || !gpsLocation) {
@@ -342,51 +387,127 @@ const TreeAnalysisScreen: React.FC = () => {
               </Typography>
 
               {!gpsLocation ? (
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <GpsFixedIcon 
-                    sx={{ 
-                      fontSize: 60, 
-                      color: 'primary.main', 
-                      mb: 2,
-                      animation: loadingGPS ? 'pulse 1.5s ease-in-out infinite' : 'none',
-                      '@keyframes pulse': {
-                        '0%': { opacity: 1 },
-                        '50%': { opacity: 0.4 },
-                        '100%': { opacity: 1 },
-                      },
-                    }} 
-                  />
-                  <Typography variant="body1" gutterBottom>
-                    Obtenez votre position actuelle
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    startIcon={<GpsFixedIcon />}
-                    onClick={getCurrentPosition}
-                    disabled={loadingGPS || !selectedImage}
-                    sx={{ mt: 2, borderRadius: 3 }}
-                  >
-                    {loadingGPS ? 'Localisation...' : 'Obtenir ma position'}
-                  </Button>
+                <Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 3 }}>
+                    <Button
+                      variant={!manualGPS ? 'contained' : 'outlined'}
+                      size="small"
+                      onClick={() => setManualGPS(false)}
+                      sx={{ borderRadius: 3 }}
+                    >
+                      Automatique
+                    </Button>
+                    <Button
+                      variant={manualGPS ? 'contained' : 'outlined'}
+                      size="small"
+                      onClick={() => setManualGPS(true)}
+                      sx={{ borderRadius: 3 }}
+                    >
+                      Manuel
+                    </Button>
+                  </Box>
+
+                  {!manualGPS ? (
+                    <Box sx={{ textAlign: 'center', py: 4 }}>
+                      <GpsFixedIcon 
+                        sx={{ 
+                          fontSize: 60, 
+                          color: 'primary.main', 
+                          mb: 2,
+                          animation: loadingGPS ? 'pulse 1.5s ease-in-out infinite' : 'none',
+                          '@keyframes pulse': {
+                            '0%': { opacity: 1 },
+                            '50%': { opacity: 0.4 },
+                            '100%': { opacity: 1 },
+                          },
+                        }} 
+                      />
+                      <Typography variant="body1" gutterBottom>
+                        Obtenez votre position actuelle
+                      </Typography>
+                      <Button
+                        variant="contained"
+                        startIcon={<GpsFixedIcon />}
+                        onClick={getCurrentPosition}
+                        disabled={loadingGPS || !selectedImage}
+                        sx={{ mt: 2, borderRadius: 3 }}
+                      >
+                        {loadingGPS ? 'Localisation...' : 'Obtenir ma position'}
+                      </Button>
+                    </Box>
+                  ) : (
+                    <Box sx={{ py: 2 }}>
+                      <Typography variant="body2" gutterBottom sx={{ mb: 2, textAlign: 'center', color: 'text.secondary' }}>
+                        Entrez manuellement les coordonnées GPS
+                      </Typography>
+                      <TextField
+                        fullWidth
+                        label="Latitude"
+                        placeholder="Ex: 36.8065"
+                        value={manualLatitude}
+                        onChange={(e) => setManualLatitude(e.target.value)}
+                        type="number"
+                        inputProps={{ step: 'any' }}
+                        sx={{ mb: 2 }}
+                        helperText="Entre -90 et 90"
+                      />
+                      <TextField
+                        fullWidth
+                        label="Longitude"
+                        placeholder="Ex: 10.1815"
+                        value={manualLongitude}
+                        onChange={(e) => setManualLongitude(e.target.value)}
+                        type="number"
+                        inputProps={{ step: 'any' }}
+                        sx={{ mb: 2 }}
+                        helperText="Entre -180 et 180"
+                      />
+                      <Button
+                        fullWidth
+                        variant="contained"
+                        startIcon={<CheckCircleIcon />}
+                        onClick={handleManualGPSSubmit}
+                        disabled={!selectedImage || !manualLatitude || !manualLongitude}
+                        sx={{ borderRadius: 3 }}
+                      >
+                        Valider les coordonnées
+                      </Button>
+                    </Box>
+                  )}
                 </Box>
               ) : (
                 <Box>
                   <Alert severity="success" icon={<CheckCircleIcon />} sx={{ mb: 2 }}>
                     Position GPS obtenue avec succès
                   </Alert>
-                  <Box sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05), p: 2, borderRadius: 2 }}>
+                  <Box sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05), p: 2, borderRadius: 2, mb: 2 }}>
                     <Typography variant="body2" gutterBottom>
                       <strong>Latitude:</strong> {gpsLocation.latitude.toFixed(6)}
                     </Typography>
                     <Typography variant="body2" gutterBottom>
                       <strong>Longitude:</strong> {gpsLocation.longitude.toFixed(6)}
                     </Typography>
-                    {gpsLocation.accuracy && (
+                    {gpsLocation.accuracy && gpsLocation.accuracy > 0 && (
                       <Typography variant="body2">
                         <strong>Précision:</strong> ±{gpsLocation.accuracy.toFixed(0)}m
                       </Typography>
                     )}
                   </Box>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    size="small"
+                    startIcon={<RefreshIcon />}
+                    onClick={() => {
+                      setGpsLocation(null);
+                      setManualLatitude('');
+                      setManualLongitude('');
+                      setActiveStep(1);
+                    }}
+                    sx={{ mb: 2, borderRadius: 3 }}
+                  >
+                    Modifier la position
+                  </Button>
                   <Button
                     variant="outlined"
                     startIcon={<RefreshIcon />}
