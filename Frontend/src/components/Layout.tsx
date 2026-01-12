@@ -22,8 +22,6 @@ import {
   Collapse,
   styled,
   alpha,
-  ButtonProps,
-  MenuItemProps,
 } from '@mui/material';
 import { 
   Person, 
@@ -123,8 +121,7 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
         <NavButton
           key={item.text}
           color="inherit"
-          component={RouterLink as any}
-          to={item.path}
+          {...({ component: RouterLink, to: item.path } as any)}
           startIcon={item.icon}
           sx={{ 
             color: isActivePath(item.path) 
@@ -167,8 +164,7 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
             {adminMenuItems.map((item) => (
               <MenuItem 
                 key={item.text}
-                component={RouterLink as any} 
-                to={item.path} 
+                {...({ component: RouterLink, to: item.path } as any)}
                 onClick={handleClose}
                 selected={isActivePath(item.path)}
               >
@@ -216,8 +212,7 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
         {menuItems.map((item) => (
           <ListItem key={item.text} disablePadding>
             <ListItemButton
-              component={RouterLink as any}
-              to={item.path}
+              {...({ component: RouterLink, to: item.path } as any)}
               onClick={toggleDrawer}
               selected={isActivePath(item.path)}
               sx={{
@@ -269,8 +264,7 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
                 {adminMenuItems.map((item) => (
                   <ListItem key={item.text} disablePadding>
                     <ListItemButton
-                      component={RouterLink as any}
-                      to={item.path}
+                      {...({ component: RouterLink, to: item.path } as any)}
                       onClick={toggleDrawer}
                       selected={isActivePath(item.path)}
                       sx={{
@@ -304,8 +298,7 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
         <Divider sx={{ my: 1 }} />
         <ListItem disablePadding>
           <ListItemButton
-            component={RouterLink as any}
-            to="/profile"
+            {...({ component: RouterLink, to: "/profile" } as any)}
             onClick={toggleDrawer}
             selected={isActivePath('/profile')}
             sx={{ borderRadius: 2, mx: 1, my: 0.5 }}
@@ -334,8 +327,7 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
         <Toolbar sx={{ justifyContent: 'space-between' }}>
           <Typography 
             variant="h6" 
-            component={RouterLink as any}
-            to="/"
+            {...({ component: RouterLink, to: "/" } as any)}
             sx={{ 
               flexGrow: 0,
               textDecoration: 'none',
@@ -368,8 +360,7 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
             <Box sx={{ display: 'flex', gap: 1 }}>
               <NavButton
                 color="inherit"
-                component={RouterLink as any}
-                to="/login"
+                {...({ component: RouterLink, to: "/login" } as any)}
                 sx={{ 
                   color: isActivePath('/login') 
                     ? theme.palette.primary.main 
@@ -380,8 +371,7 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
               </NavButton>
               <NavButton
                 variant="contained"
-                component={RouterLink as any}
-                to="/register"
+                {...({ component: RouterLink, to: "/register" } as any)}
                 sx={{
                   background: 'linear-gradient(45deg, #00e676, #4caf50)',
                   color: 'white',
@@ -433,7 +423,11 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
             }
           }}
         >
-          <MenuItem component={RouterLink as any} to="/profile" onClick={handleClose}>
+          <MenuItem 
+            onClick={handleClose}
+            {...({ component: RouterLink, to: "/profile" } as any)}
+            sx={{ textDecoration: 'none' }}
+          >
             <ListItemIcon>
               <Person fontSize="small" />
             </ListItemIcon>
