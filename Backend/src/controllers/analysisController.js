@@ -106,6 +106,13 @@ function generateLocalAnalysis(treeType, imagePath) {
 // Create analysis with GPS-based tree matching and AI analysis
 const createAnalysisWithGPSAndAI = async (req, res) => {
   try {
+    console.log('📥 Requête reçue - req.body:', JSON.stringify(req.body, null, 2));
+    console.log('📥 Fichier uploadé:', req.file ? {
+      filename: req.file.filename,
+      mimetype: req.file.mimetype,
+      size: req.file.size
+    } : 'aucun');
+
     let {
       treeType,
       gpsData,
@@ -227,12 +234,12 @@ const createAnalysisWithGPSAndAI = async (req, res) => {
     }
 
     // 5. Create the analysis with AI results
-    const analysis = new Analysis({
+    const analysisData = {
       treeId: matchedTree.treeId,
       date: new Date(),
       images: [{
         url: imageUrl,
-        type: 'analysis'
+        imageType: 'analysis'
       }],
       diseaseDetection: aiResults.diseaseDetection,
       treeAnalysis: aiResults.treeAnalysis,
@@ -240,7 +247,15 @@ const createAnalysisWithGPSAndAI = async (req, res) => {
       measurements: measurements || {},
       notes: notes || '',
       createdBy: req.user.userId
-    });
+    };
+
+    console.log('📝 Données d\'analyse avant sauvegarde:', JSON.stringify({
+      treeId: analysisData.treeId,
+      images: analysisData.images,
+      imageUrl: imageUrl
+    }, null, 2));
+
+    const analysis = new Analysis(analysisData);
 
     await analysis.save();
     console.log(`📊 Analyse créée avec succès`);

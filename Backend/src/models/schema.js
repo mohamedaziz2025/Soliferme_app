@@ -47,10 +47,13 @@ const analysisSchema = new mongoose.Schema({
   date: { type: Date, default: Date.now },
   fruitCount: Number,
   treeHealth: String,
-  images: [{
-    url: String,
-    type: String, // 'regular', 'infrared', etc.
-  }],
+  images: {
+    type: [{
+      url: String,
+      imageType: String, // 'regular', 'infrared', 'analysis', etc.
+    }],
+    default: []
+  },
   measurements: {
     height: Number,
     width: Number,
