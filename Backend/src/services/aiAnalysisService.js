@@ -169,7 +169,7 @@ class AIAnalysisService {
       },
       treeAnalysis: {
         species: 'Non identifié',
-        estimatedAge: 'Non estimé',
+        estimatedAge: 0,
         foliageDensity: 70,
         structuralIntegrity: 80,
         growthIndicators: {
