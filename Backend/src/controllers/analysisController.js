@@ -90,14 +90,23 @@ const createAnalysisWithGPSAndAI = async (req, res) => {
 
     // 1. Analyse AI de l'image
     console.log('🤖 Lancement de l\'analyse AI...');
-    const aiService = getAIAnalysisService();
-    const aiResults = await aiService.analyzeTreeImage(imagePath, {
-      tree_type: treeType,
-      gps_data: gpsData
-    });
+    let aiResults = null;
+    
+    try {
+      const aiService = getAIAnalysisService();
+      aiResults = await aiService.analyzeTreeImage(imagePath, {
+        tree_type: treeType,
+        gps_data: gpsData
+      });
 
-    if (!aiResults.success) {
-      console.warn('⚠️ Analyse AI échouée, utilisation des données par défaut');
+      if (!aiResults || !aiResults.success) {
+        console.warn('⚠️ Analyse AI échouée, utilisation des données par défaut');
+        aiResults = null;
+      }
+    } catch (aiError) {
+      console.error('❌ Erreur service AI:', aiError.message);
+      console.log('📝 Continuation sans AI...');
+      aiResults = null;
     }
 
     const searchRadius = 10; // 10 meters radius
@@ -170,7 +179,7 @@ const createAnalysisWithGPSAndAI = async (req, res) => {
           lastName: 'User',
           email: req.user.email
         },
-        ownerId: req.user.id,
+        ownerId: req.user.userId,
         measurements: measurements || {},
         status: 'healthy',
         isArchived: false
@@ -188,23 +197,27 @@ const createAnalysisWithGPSAndAI = async (req, res) => {
         url: imageUrl,
         type: 'analysis'
       }],
-      diseaseDetection: aiResults.diseaseDetection || {
+      diseaseDetection: aiResults?.diseaseDetection || {
         detected: false,
         diseases: [],
         overallHealthScore: 100
       },
-      treeAnalysis: aiResults.treeAnalysis || {},
+      treeAnalysis: aiResults?.treeAnalysis || {
+        species: treeType,
+        healthStatus: 'healthy',
+        notes: 'Analyse manuelle - Service AI non disponible'
+      },
       gpsData,
       measurements: measurements || {},
       notes: notes || '',
-      createdBy: req.user.id
+      createdBy: req.user.userId
     });
 
     await analysis.save();
     console.log(`📊 Analyse créée avec succès`);
 
     // 6. Update tree status based on disease detection
-    if (aiResults.diseaseDetection && aiResults.diseaseDetection.detected && 
+    if (aiResults?.diseaseDetection && aiResults.diseaseDetection.detected && 
         aiResults.diseaseDetection.diseases.length > 0) {
       const highSeverity = aiResults.diseaseDetection.diseases.some(d => 
         d.severity === 'high' || d.severity === 'critical'
@@ -228,9 +241,13 @@ const createAnalysisWithGPSAndAI = async (req, res) => {
       analysis,
       tree: matchedTree,
       isNewTree,
-      aiAnalysis: {
-        method: aiResults.metadata?.analysisMethod || 'unknown',
+      aiAnalysis: aiResults ? {
+        method: aiResults.metadata?.analysisMethod || 'ai',
         timestamp: aiResults.metadata?.timestamp || new Date().toISOString()
+      } : {
+        method: 'manual',
+        timestamp: new Date().toISOString(),
+        note: 'Service AI non disponible'
       }
     });
 
@@ -336,7 +353,7 @@ const createAnalysisWithGPSMatching = async (req, res) => {
           lastName: 'User',
           email: req.user.email
         },
-        ownerId: req.user.id,
+        ownerId: req.user.userId,
         measurements: measurements || {},
         status: 'healthy',
         isArchived: false
@@ -359,7 +376,7 @@ const createAnalysisWithGPSMatching = async (req, res) => {
       gpsData,
       measurements: measurements || {},
       notes: notes || '',
-      createdBy: req.user.id
+      createdBy: req.user.userId
     });
 
     await analysis.save();
