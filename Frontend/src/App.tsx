@@ -23,6 +23,7 @@ import TreeAnalysisReports from './pages/TreeAnalysisReports';
 import AdminTreeManagement from './pages/AdminTreeManagement';
 import TreeAnalysisScreen from './pages/TreeAnalysisScreen';
 import TokenDebugPage from './pages/TokenDebugPage';
+import TreeARMeasurement from './pages/TreeARMeasurement';
 
 const theme = createTheme({
   palette: {
@@ -360,6 +361,14 @@ const App = () => {
               element={
                 <PrivateRoute isAuthenticated={isAuthenticated}>
                   <TreeAnalysisScreen />
+                </PrivateRoute>
+              } 
+            />
+            <Route 
+              path="/ar-measurement" 
+              element={
+                <PrivateRoute isAuthenticated={isAuthenticated}>
+                  <TreeARMeasurement />
                 </PrivateRoute>
               } 
             />

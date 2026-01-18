@@ -39,6 +39,7 @@ import {
   ExpandLess,
   ExpandMore,
   LocalFlorist as TreeManageIcon,
+  Straighten as MeasureIcon,
 } from '@mui/icons-material';
 
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
@@ -72,6 +73,7 @@ const menuItems: MenuItem[] = [
   { text: 'Liste des arbres', icon: <Forest />, path: '/trees' },
   { text: 'Carte', icon: <Map />, path: '/map' },
   { text: 'Scanner', icon: <CameraIcon />, path: '/analysis/scan' },
+  { text: 'Mesure AR', icon: <MeasureIcon />, path: '/ar-measurement' },
 ];
 
 const adminMenuItems: MenuItem[] = [
