@@ -4,6 +4,7 @@ import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 import './notification_service.dart';
 import './sync_service.dart';
+import './local_db_service.dart';
 
 class AnalysisService {
   static final AnalysisService _instance = AnalysisService._internal();
@@ -124,9 +125,17 @@ class AnalysisService {
   }
 
   Future<void> _saveAnalysisResults(String treeId, Map<String, dynamic> results) async {
+    // persist to file (legacy)
     final directory = await getApplicationDocumentsDirectory();
     final file = File('${directory.path}/analysis_$treeId.json');
     await file.writeAsString(results.toString());
+
+    // also store in local database for offline access
+    try {
+      await LocalDatabase.instance.saveAnalysis(treeId, results.toString());
+    } catch (e) {
+      print('Failed to write analysis to local DB: $e');
+    }
   }
 
   Future<Map<String, dynamic>?> getLastAnalysis(String treeId) async {
@@ -138,6 +147,11 @@ class AnalysisService {
         final contents = await file.readAsString();
         // Parse the string back to Map
         return Map<String, dynamic>.from(eval(contents));
+      }
+      // fallback to local database
+      final dbData = await LocalDatabase.instance.getAnalysis(treeId);
+      if (dbData != null) {
+        return Map<String, dynamic>.from(eval(dbData));
       }
       return null;
     } catch (e) {

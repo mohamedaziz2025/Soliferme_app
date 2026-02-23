@@ -8,6 +8,7 @@ const treeRoutes = require('./routes/trees');
 const analysisRoutes = require('./routes/analysis');
 const dashboardRoutes = require('./routes/dashboard');
 const importRoutes = require('./routes/import');
+const syncRoutes = require('./routes/sync');
 const winston = require('winston');
 
 // Configuration du logger
@@ -45,6 +46,7 @@ app.use('/api/trees', treeRoutes);
 app.use('/api/analysis', analysisRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/import', importRoutes);
+app.use('/api/sync', syncRoutes);
 
 // Health check endpoint for Docker and Kubernetes
 app.get('/health', (req, res) => {

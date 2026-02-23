@@ -8,6 +8,7 @@ Application mobile de suivi d'arbres fruitiers.
 2. Clonez ce dépôt
 3. Exécutez `flutter pub get` pour installer les dépendances
 4. Téléchargez le modèle TensorFlow Lite et placez-le dans `assets/models/tree_analysis_model.tflite`
+5. Si vous souhaitez activer les mesures AR, clonez ou conservez le dossier `ar_flutter_plugin` au niveau racine et ajoutez la dépendance correspondante (déjà configurée dans ce dépôt).
 5. Téléchargez les polices Roboto et placez-les dans `assets/fonts/`:
    - Roboto-Regular.ttf
    - Roboto-Medium.ttf
@@ -38,6 +39,8 @@ Application mobile de suivi d'arbres fruitiers.
 - Liste des arbres avec filtres et recherche
 - Scanner de QR code pour identification rapide
 - Analyse de santé des arbres avec TensorFlow Lite
+- Mesures en Réalité Augmentée (plugin local `ar_flutter_plugin`)
+  - accessible depuis la fiche d'un arbre via l'icone 📏
 - Synchronisation des données hors ligne
 - Notifications pour le suivi des arbres
 - Interface administrateur pour la gestion des utilisateurs

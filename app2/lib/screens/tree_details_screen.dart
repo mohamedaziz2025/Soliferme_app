@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/tree_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/glassmorphism_widgets.dart';
+import 'ar_measurement_screen.dart';
 
 class TreeDetailsScreen extends StatefulWidget {
   final String treeId;
@@ -234,12 +235,59 @@ class _TreeDetailsScreenState extends State<TreeDetailsScreen> {
                       ListTile(
                         leading: const Icon(Icons.height, color: Colors.white70),
                         title: const Text('Hauteur', style: TextStyle(color: Colors.white)),
-                        trailing: Text('${treeData['measurements']?['height'] ?? 0} m', style: const TextStyle(color: Colors.white)),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('${treeData['measurements']?['height'] ?? 0} m', style: const TextStyle(color: Colors.white)),
+                            IconButton(
+                              tooltip: 'Mesure AR',
+                              icon: const Icon(Icons.straighten, color: Colors.white),
+                              onPressed: () async {
+                                final result = await Navigator.push<double?>(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ARMeasurementScreen(treeId: widget.treeId),
+                                  ),
+                                );
+                                if (result != null && result > 0) {
+                                  setState(() {
+                                    treeData['measurements'] ??= {};
+                                    treeData['measurements']['height'] = result;
+                                  });
+                                }
+                              },
+                            ),
+                          ],
+                        ),
                       ),
                       ListTile(
                         leading: const Icon(Icons.width_normal, color: Colors.white70),
                         title: const Text('Largeur', style: TextStyle(color: Colors.white)),
-                        trailing: Text('${treeData['measurements']?['width'] ?? 0} m', style: const TextStyle(color: Colors.white)),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('${treeData['measurements']?['width'] ?? 0} m', style: const TextStyle(color: Colors.white)),
+                            IconButton(
+                              tooltip: 'Mesure AR',
+                              icon: const Icon(Icons.straighten, color: Colors.white),
+                              onPressed: () async {
+                                // reuse AR screen to compute width if needed
+                                final result = await Navigator.push<double?>(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ARMeasurementScreen(treeId: widget.treeId),
+                                  ),
+                                );
+                                if (result != null && result > 0) {
+                                  setState(() {
+                                    treeData['measurements'] ??= {};
+                                    treeData['measurements']['width'] = result;
+                                  });
+                                }
+                              },
+                            ),
+                          ],
+                        ),
                       ),
                       ListTile(
                         leading: const Icon(Icons.monitor_heart_outlined, color: Colors.white70),
@@ -249,6 +297,37 @@ class _TreeDetailsScreenState extends State<TreeDetailsScreen> {
                           backgroundColor: _getStatusColor(treeData['status']),
                         ),
                       ),
+                      if (treeData['images'] != null && (treeData['images'] as List).isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          height: 120,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: (treeData['images'] as List).length,
+                            itemBuilder: (context, idx) {
+                              final url = (treeData['images'][idx] ?? '').toString();
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 8.0),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(
+                                    url,
+                                    width: 120,
+                                    height: 120,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Container(
+                                      width: 120,
+                                      height: 120,
+                                      color: Colors.grey[800],
+                                      child: const Icon(Icons.broken_image, color: Colors.white54),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

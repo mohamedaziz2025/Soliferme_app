@@ -34,7 +34,7 @@ class AuthService extends ChangeNotifier {
   Future<void> initialize() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      _token = prefs.getString(tokenKey);
+      _token = await _secureStorage.getAuthToken();
       final userDataStr = prefs.getString(userKey);
       
       if (userDataStr != null) {
@@ -133,9 +133,9 @@ class AuthService extends ChangeNotifier {
         _userData = data['user'];
         _isAdmin = _userData?['role'] == 'admin';
 
-        // Save to local storage
+        // Save to secure storage and prefs
+        await _secureStorage.saveAuthToken(_token!);
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(tokenKey, _token!);
         await prefs.setString(userKey, json.encode(_userData));
 
         notifyListeners();
@@ -157,8 +157,8 @@ class AuthService extends ChangeNotifier {
     _userData = null;
     _isAdmin = false;
 
+    await _secureStorage.removeAuthToken();
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(tokenKey);
     await prefs.remove(userKey);
 
     notifyListeners();
@@ -183,8 +183,8 @@ class AuthService extends ChangeNotifier {
         _userData = data['user'];
         _isAdmin = _userData?['role'] == 'admin';
         
+        await _secureStorage.saveAuthToken(_token!);
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(tokenKey, _token!);
         await prefs.setString(userKey, json.encode(_userData));
         
         notifyListeners();

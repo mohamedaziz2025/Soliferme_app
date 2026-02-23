@@ -11,6 +11,12 @@ La fonctionnalité de mesure AR (Réalité Augmentée) vous permet de mesurer vo
 2. Cliquez sur **"Mesure AR"** dans le menu de navigation
 3. Ou accédez directement via : `https://votre-site.com/ar-measurement`
 
+### Application mobile Flutter
+- Se rendre sur la fiche d'un arbre (depuis la carte ou la liste)
+- Utiliser l'icone 📏 à côté des champs *Hauteur* / *Largeur* pour lancer la mesure AR
+- Le code du composant se trouve dans `app2/lib/screens/ar_measurement_screen.dart`
+- Le plugin utilisé est `app2/ar_flutter_plugin` (dépendance locale ajoutée dans `pubspec.yaml`)
+
 ### Depuis le tableau de bord
 - Une carte d'accès rapide est disponible sur le tableau de bord
 - Cliquez sur **"Commencer à mesurer"**

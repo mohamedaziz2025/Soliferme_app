@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import './local_db_service.dart';
 import 'tree_service.dart';
 import 'package:http/http.dart' as http;
 import './notification_service.dart';
@@ -23,6 +24,9 @@ class SyncService {
   SyncService._internal();
 
   static const String baseUrl = 'http://localhost:3000/api';
+
+  // reference to local database for offline support
+  final LocalDatabase _localDb = LocalDatabase.instance;
   static const String lastSyncKey = 'last_sync_timestamp';
   final _notificationService = NotificationService();
 
@@ -75,11 +79,11 @@ class SyncService {
   }
 
   Future<void> _syncLocalChangesToServer() async {
-    final prefs = await SharedPreferences.getInstance();
-    final pendingChanges = prefs.getStringList('pending_changes') ?? [];
+    // fetch pending events from local SQLite queue
+    final pendingChanges = await _localDb.getPendingEvents();
 
-    for (final changeStr in pendingChanges) {
-      final change = json.decode(changeStr);
+for (final change in pendingChanges) {
+        // pendingChanges already decoded maps
       
       try {
         final response = await http.post(
@@ -92,8 +96,8 @@ class SyncService {
         );
 
         if (response.statusCode == 200) {
-          pendingChanges.remove(changeStr);
-          await prefs.setStringList('pending_changes', pendingChanges);
+          // remove from local queue
+          await _localDb.deleteEvent(change['id']);
         } else {
           throw Exception('Échec de la synchronisation des modifications locales');
         }
@@ -177,7 +181,7 @@ class SyncService {
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final analysisData = prefs.getString('analysis_$treeId');
+      final analysisData = await _localDb.getAnalysis(treeId);
       
       if (analysisData != null) {
         final response = await http.post(
@@ -209,17 +213,17 @@ class SyncService {
   }
 
   Future<void> queueLocalChange(String type, String id, Map<String, dynamic> data) async {
-    final prefs = await SharedPreferences.getInstance();
-    final pendingChanges = prefs.getStringList('pending_changes') ?? [];
-    
-    pendingChanges.add(json.encode({
-      'type': type,
-      'id': id,
-      'data': data,
-      'timestamp': DateTime.now().toIso8601String(),
-    }));
-    
-    await prefs.setStringList('pending_changes', pendingChanges);
+    // store the change in the SQLite event queue instead of SharedPreferences
+    await _localDb.queueEvent(
+      id,
+      type,
+      json.encode({
+        'type': type,
+        'id': id,
+        'data': data,
+        'timestamp': DateTime.now().toIso8601String(),
+      }),
+    );
   }
 
   Future<Map<String, dynamic>?> getCachedTree(String id) async {
