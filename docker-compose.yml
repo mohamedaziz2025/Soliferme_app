@@ -7,11 +7,11 @@ services:
     container_name: soliferme-mongodb
     restart: unless-stopped
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: soliferme2026
-      MONGO_INITDB_DATABASE: soliferme
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-soliferme2026}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-soliferme}
     ports:
-      - "27017:27017"
+      - "${MONGO_PORT_EXTERNAL:-27017}:27017"
     volumes:
       - mongodb_data:/data/db
       - mongodb_config:/data/configdb
@@ -32,12 +32,12 @@ services:
     container_name: soliferme-ai-service
     restart: unless-stopped
     environment:
-      - FLASK_PORT=5001
+      - FLASK_PORT=${AI_SERVICE_PORT:-5001}
       - AI_MODE=basic
       - MODEL_PATH=/app/models
       - PYTHONUNBUFFERED=1
     ports:
-      - "5001:5001"
+      - "${AI_SERVICE_PORT_EXTERNAL:-5001}:${AI_SERVICE_PORT:-5001}"
     volumes:
       - ai_models:/app/models
       - ai_uploads:/app/uploads
@@ -58,14 +58,14 @@ services:
     container_name: soliferme-backend
     restart: unless-stopped
     environment:
-      - NODE_ENV=production
-      - PORT=5000
-      - MONGODB_URI=mongodb://admin:soliferme2026@mongodb:27017/soliferme?authSource=admin
-      - JWT_SECRET=votre_secret_jwt_super_securise_2026
-      - AI_SERVICE_URL=http://ai-service:5001
-      - CORS_ORIGIN=http://localhost:3000
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=${BACKEND_PORT:-5000}
+      - MONGODB_URI=mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-soliferme2026}@mongodb:27017/${MONGO_DATABASE:-soliferme}?authSource=admin
+      - JWT_SECRET=${JWT_SECRET:-votre_secret_jwt_super_securise_2026}
+      - AI_SERVICE_URL=http://ai-service:${AI_SERVICE_PORT:-5001}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
     ports:
-      - "35000:5000"
+      - "${BACKEND_PORT_EXTERNAL:-35000}:${BACKEND_PORT:-5000}"
     volumes:
       - backend_uploads:/app/uploads
       - backend_logs:/app/logs
@@ -91,9 +91,9 @@ services:
     container_name: soliferme-frontend
     restart: unless-stopped
     environment:
-      - REACT_APP_API_URL=http://localhost:5000
+      - REACT_APP_API_URL=${REACT_APP_API_URL:-http://localhost:${BACKEND_PORT_EXTERNAL:-35000}}
     ports:
-      - "38000:80"
+      - "${FRONTEND_PORT_EXTERNAL:-38000}:80"
     depends_on:
       - backend
     networks:

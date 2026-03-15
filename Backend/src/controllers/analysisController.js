@@ -2,6 +2,7 @@ const { Analysis, Tree } = require('../models/schema');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { getAIAnalysisService } = require('../services/aiService');
 
 // Configuration multer pour l'upload d'images
 const storage = multer.diskStorage({
@@ -147,10 +148,15 @@ const createAnalysisWithGPSAndAI = async (req, res) => {
     const imagePath = req.file.path;
     const imageUrl = `/uploads/analysis/${req.file.filename}`;
 
-    // 1. Analyse AI locale intégrée (pas de service distant)
-    console.log('🔍 Analyse locale en cours...');
-    const aiResults = generateLocalAnalysis(treeType, imagePath);
-    console.log('✅ Analyse locale terminée');
+    // 1. Analyse AI avec le service Python YOLO
+    console.log('🔍 Appel du service Python YOLO en cours...');
+    const aiService = getAIAnalysisService();
+    const aiResults = await aiService.analyzeTreeImage(imagePath, {
+      tree_type: treeType,
+      gps_data: gpsData
+    });
+    console.log('✅ Analyse YOLO terminée');
+    console.log('📊 Résultats YOLO:', JSON.stringify(aiResults, null, 2));
 
 
     const searchRadius = 10; // 10 meters radius
@@ -281,12 +287,12 @@ const createAnalysisWithGPSAndAI = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: isNewTree ? 'Nouvel arbre créé avec analyse locale' : 'Analyse locale ajoutée à l\'arbre existant',
+      message: isNewTree ? 'Nouvel arbre créé avec analyse YOLO' : 'Analyse YOLO ajoutée à l\'arbre existant',
       analysis,
       tree: matchedTree,
       isNewTree,
       aiAnalysis: {
-        method: 'local',
+        method: 'python-yolo',
         timestamp: new Date().toISOString(),
         diseaseDetection: aiResults.diseaseDetection,
         treeAnalysis: aiResults.treeAnalysis
