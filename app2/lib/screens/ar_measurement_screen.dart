@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ar_flutter_plugin/ar_flutter_plugin.dart';
-import 'package:vector_math/vector_math_64.dart';
+import 'package:vector_math/vector_math_64.dart' as vector_math;
 import 'package:provider/provider.dart';
 import '../services/tree_service.dart';
 
@@ -144,7 +144,7 @@ class _ARMeasurementScreenState extends State<ARMeasurementScreen> {
                       value: '${_lastDistance!.toStringAsFixed(2)} mètres',
                       child: Text(
                         'Distance : ${_lastDistance!.toStringAsFixed(2)} m',
-                        style: const TextStyle(color: Colors.white, fontSize: 18),
+                        style: TextStyle(color: Colors.white, fontSize: 18),
                       ),
                     ),
                   ),

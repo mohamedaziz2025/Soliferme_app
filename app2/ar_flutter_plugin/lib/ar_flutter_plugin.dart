@@ -1,4 +1,11 @@
 export 'package:ar_flutter_plugin/widgets/ar_view.dart';
+export 'package:ar_flutter_plugin/managers/ar_session_manager.dart';
+export 'package:ar_flutter_plugin/managers/ar_object_manager.dart';
+export 'package:ar_flutter_plugin/managers/ar_anchor_manager.dart';
+export 'package:ar_flutter_plugin/managers/ar_location_manager.dart';
+export 'package:ar_flutter_plugin/models/ar_anchor.dart';
+export 'package:ar_flutter_plugin/models/ar_hittest_result.dart';
+export 'package:ar_flutter_plugin/datatypes/config_planedetection.dart';
 
 import 'dart:async';
 
