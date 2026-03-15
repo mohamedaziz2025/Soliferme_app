@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Autoriser le trafic HTTP pour développement et l'IP du serveur -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">72.62.71.97</domain>
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">10.0.0.0</domain>
+    </domain-config>
+    
+    <!-- Configuration par défaut - HTTPS uniquement pour les domaines publics -->
+    <default-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </default-config>
+</network-security-config>
