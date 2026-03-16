@@ -1,6 +1,7 @@
 const express = require('express');
 const authMiddleware = require('../middleware/auth');
 const SyncEvent = require('../models/syncEvent');
+const { publish } = require('../services/eventBus');
 
 const router = express.Router();
 
@@ -15,6 +16,14 @@ router.post('/upload', authMiddleware, async (req, res) => {
       timestamp: timestamp ? new Date(timestamp) : Date.now(),
     });
     await event.save();
+
+    await publish('sync.uploaded', {
+      type,
+      refId: id,
+      userId: req.user && req.user.userId ? req.user.userId : null,
+      timestamp: event.timestamp,
+    });
+
     res.json({ success: true });
   } catch (err) {
     console.error('Upload sync error', err);

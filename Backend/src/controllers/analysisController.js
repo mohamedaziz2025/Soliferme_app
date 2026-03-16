@@ -3,6 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { getAIAnalysisService } = require('../services/aiService');
+const { publish } = require('../services/eventBus');
 
 // Configuration multer pour l'upload d'images
 const storage = multer.diskStorage({
@@ -107,6 +108,7 @@ function generateLocalAnalysis(treeType, imagePath) {
 // Create analysis with GPS-based tree matching and AI analysis
 const createAnalysisWithGPSAndAI = async (req, res) => {
   try {
+    const requestStart = Date.now();
     console.log('📥 Requête reçue - req.body:', JSON.stringify(req.body, null, 2));
     console.log('📥 Fichier uploadé:', req.file ? {
       filename: req.file.filename,
@@ -151,10 +153,12 @@ const createAnalysisWithGPSAndAI = async (req, res) => {
     // 1. Analyse AI avec le service Python YOLO
     console.log('🔍 Appel du service Python YOLO en cours...');
     const aiService = getAIAnalysisService();
+    const aiStart = Date.now();
     const aiResults = await aiService.analyzeTreeImage(imagePath, {
       tree_type: treeType,
       gps_data: gpsData
     });
+    const aiInferenceMs = Date.now() - aiStart;
     console.log('✅ Analyse YOLO terminée');
     console.log('📊 Résultats YOLO:', JSON.stringify(aiResults, null, 2));
 
@@ -285,12 +289,29 @@ const createAnalysisWithGPSAndAI = async (req, res) => {
       await matchedTree.save();
     }
 
+    const totalProcessingMs = Date.now() - requestStart;
+
+    await publish('analysis.created', {
+      analysisId: analysis._id,
+      treeId: matchedTree.treeId,
+      userId: req.user && req.user.userId ? req.user.userId : null,
+      aiInferenceMs,
+      totalProcessingMs,
+      isNewTree,
+      hasDisease: Boolean(aiResults?.diseaseDetection?.detected),
+    });
+
     res.status(201).json({
       success: true,
       message: isNewTree ? 'Nouvel arbre créé avec analyse YOLO' : 'Analyse YOLO ajoutée à l\'arbre existant',
       analysis,
       tree: matchedTree,
       isNewTree,
+      performance: {
+        aiInferenceMs,
+        totalProcessingMs,
+        meets2sTarget: aiInferenceMs < 2000,
+      },
       aiAnalysis: {
         method: 'python-yolo',
         timestamp: new Date().toISOString(),

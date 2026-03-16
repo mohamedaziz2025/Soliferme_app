@@ -7,6 +7,7 @@ import './local_db_service.dart';
 import 'tree_service.dart';
 import 'package:http/http.dart' as http;
 import './notification_service.dart';
+import '../config/app_config_v2.dart';
 
 class SyncResult {
   final bool success;
@@ -23,7 +24,7 @@ class SyncService {
   factory SyncService() => _instance;
   SyncService._internal();
 
-  static const String baseUrl = 'http://localhost:3000/api';
+  static const String baseUrl = '${AppConfig.backendBaseUrl}/api';
 
   // reference to local database for offline support
   final LocalDatabase _localDb = LocalDatabase.instance;

@@ -11,16 +11,52 @@ class AnalysisService {
   factory AnalysisService() => _instance;
   AnalysisService._internal();
 
+  static const String _mobileNetV2ModelPath = 'assets/models/mobilenet_v2_tree_health.tflite';
+  static const List<String> _legacyModelFallbacks = [
+    'assets/models/tree_health_model.tflite',
+    'assets/models/tree_analysis_model.tflite',
+  ];
+
   late Interpreter _interpreter;
   final NotificationService _notificationService = NotificationService();
   final SyncService _syncService = SyncService();
+  String _loadedModelPath = '';
 
   Future<void> initialize() async {
-    try {
-      _interpreter = await Interpreter.fromAsset('assets/models/tree_health_model.tflite');
-    } catch (e) {
-      print('Error loading model: $e');
-      rethrow;
+    final candidateModels = <String>[
+      _mobileNetV2ModelPath,
+      ..._legacyModelFallbacks,
+    ];
+
+    for (final modelPath in candidateModels) {
+      try {
+        _interpreter = await Interpreter.fromAsset(modelPath);
+        _loadedModelPath = modelPath;
+        _validateModelCompatibility();
+        print('Model loaded successfully: $_loadedModelPath');
+        return;
+      } catch (_) {
+        // Try next candidate model.
+      }
+    }
+
+    throw Exception(
+      'Unable to load MobileNetV2 model. Expected asset: $_mobileNetV2ModelPath',
+    );
+  }
+
+  void _validateModelCompatibility() {
+    final inputShape = _interpreter.getInputTensor(0).shape;
+
+    final expected = [1, 224, 224, 3];
+    final isCompatible =
+        inputShape.length == expected.length &&
+        inputShape.asMap().entries.every((entry) => expected[entry.key] == entry.value);
+
+    if (!isCompatible) {
+      throw Exception(
+        'Incompatible model input shape: $inputShape. Expected [1, 224, 224, 3] for MobileNetV2.',
+      );
     }
   }
 
@@ -116,6 +152,7 @@ class AnalysisService {
 
     return {
       'timestamp': DateTime.now().toIso8601String(),
+      'model_path': _loadedModelPath,
       'health_score': healthScore,
       'primary_issue': healthLabels[maxIndex],
       'severity': severity,

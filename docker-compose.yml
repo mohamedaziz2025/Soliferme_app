@@ -1,6 +1,41 @@
 version: '3.8'
 
 services:
+  # Zookeeper (Kafka dependency)
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: soliferme-zookeeper
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "${ZOOKEEPER_PORT_EXTERNAL:-2181}:2181"
+    networks:
+      - soliferme-network
+
+  # Apache Kafka event bus
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: soliferme-kafka
+    restart: unless-stopped
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:${KAFKA_PORT_EXTERNAL:-9092}
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+    ports:
+      - "${KAFKA_PORT_EXTERNAL:-9092}:9092"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - soliferme-network
+
   # MongoDB Database
   mongodb:
     image: mongo:7.0
@@ -39,7 +74,7 @@ services:
     ports:
       - "${AI_SERVICE_PORT_EXTERNAL:-5001}:${AI_SERVICE_PORT:-5001}"
     volumes:
-      - ai_models:/app/models
+      - ./Backend/models:/app/models
       - ai_uploads:/app/uploads
     networks:
       - soliferme-network
@@ -64,6 +99,10 @@ services:
       - JWT_SECRET=${JWT_SECRET:-votre_secret_jwt_super_securise_2026}
       - AI_SERVICE_URL=http://ai-service:${AI_SERVICE_PORT:-5001}
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
+      - KAFKA_ENABLED=${KAFKA_ENABLED:-true}
+      - KAFKA_BROKERS=${KAFKA_BROKERS:-kafka:9092}
+      - KAFKA_CLIENT_ID=${KAFKA_CLIENT_ID:-fruitytrack-backend}
+      - KAFKA_TOPIC_PREFIX=${KAFKA_TOPIC_PREFIX:-fruitytrack}
     ports:
       - "${BACKEND_PORT_EXTERNAL:-35000}:${BACKEND_PORT:-5000}"
     volumes:
@@ -74,6 +113,8 @@ services:
         condition: service_healthy
       ai-service:
         condition: service_healthy
+      kafka:
+        condition: service_started
     networks:
       - soliferme-network
     healthcheck:
@@ -114,11 +155,11 @@ volumes:
     driver: local
   mongodb_config:
     driver: local
-  ai_models:
-    driver: local
   ai_uploads:
     driver: local
   backend_uploads:
     driver: local
   backend_logs:
+    driver: local
+  kafka_data:
     driver: local
