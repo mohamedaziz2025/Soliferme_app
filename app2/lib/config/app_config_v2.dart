@@ -11,12 +11,12 @@ class AppConfig {
   // Déterminer l'URL du backend selon la plateforme
   static const String backendBaseUrl = String.fromEnvironment(
     'BACKEND_URL',
-    defaultValue: _getDefaultBackendUrl(),
+    defaultValue: _getDefaultBackendUrl,
   );
   
   static const String aiServiceUrl = String.fromEnvironment(
     'AI_SERVICE_URL', 
-    defaultValue: _getDefaultAiServiceUrl(),
+    defaultValue: _getDefaultAiServiceUrl,
   );
 
   // ============================================================
