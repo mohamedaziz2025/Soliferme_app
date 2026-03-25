@@ -9,10 +9,28 @@ class SecureStorageService {
   final _storage = const FlutterSecureStorage();
   late encrypt.Encrypter _encrypter;
   late encrypt.IV _iv;
+  bool _isInitialized = false;
+  Future<void>? _initializationFuture;
 
   SecureStorageService._internal();
 
   Future<void> initialize() async {
+    if (_isInitialized) return;
+    if (_initializationFuture != null) {
+      await _initializationFuture;
+      return;
+    }
+
+    _initializationFuture = _initializeInternal();
+    try {
+      await _initializationFuture;
+    } catch (e) {
+      _initializationFuture = null;
+      rethrow;
+    }
+  }
+
+  Future<void> _initializeInternal() async {
     final key = await _storage.read(key: 'encryption_key');
     if (key == null) {
       // Générer une nouvelle clé si elle n'existe pas
@@ -29,14 +47,17 @@ class SecureStorageService {
     
     _iv = encrypt.IV.fromLength(16);
     _encrypter = encrypt.Encrypter(encrypt.AES(encryptKey));
+    _isInitialized = true;
   }
 
   Future<void> saveSecure(String key, String value) async {
+    await initialize();
     final encrypted = _encrypter.encrypt(value, iv: _iv);
     await _storage.write(key: key, value: encrypted.base64);
   }
 
   Future<String?> getSecure(String key) async {
+    await initialize();
     final encrypted = await _storage.read(key: key);
     if (encrypted == null) return null;
     
@@ -49,6 +70,7 @@ class SecureStorageService {
   }
 
   Future<void> deleteSecure(String key) async {
+    await initialize();
     await _storage.delete(key: key);
   }
 

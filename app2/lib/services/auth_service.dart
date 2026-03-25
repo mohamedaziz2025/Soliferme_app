@@ -33,6 +33,7 @@ class AuthService extends ChangeNotifier {
 
   Future<void> initialize() async {
     try {
+      await _secureStorage.initialize();
       final prefs = await SharedPreferences.getInstance();
       _token = await _secureStorage.getAuthToken();
       final userDataStr = prefs.getString(userKey);

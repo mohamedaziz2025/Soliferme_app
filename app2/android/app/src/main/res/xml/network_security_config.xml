@@ -7,10 +7,10 @@
         <domain includeSubdomains="true">10.0.0.0</domain>
     </domain-config>
     
-    <!-- Configuration par défaut - HTTPS uniquement pour les domaines publics -->
-    <default-config cleartextTrafficPermitted="false">
+    <!-- Configuration globale - HTTPS uniquement pour les domaines publics -->
+    <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
-    </default-config>
+    </base-config>
 </network-security-config>

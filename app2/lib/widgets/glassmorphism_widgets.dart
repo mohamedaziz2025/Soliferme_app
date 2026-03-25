@@ -699,25 +699,29 @@ class _ModernBackgroundState extends State<ModernBackground>
         children: [
           // Particle animation layer
           if (widget.showParticles)
-            AnimatedBuilder(
-              animation: _particleController,
-              builder: (context, child) {
-                return CustomPaint(
-                  painter: ParticlePainter(_particles, _particleController.value),
-                  size: Size.infinite,
-                );
-              },
+            IgnorePointer(
+              child: AnimatedBuilder(
+                animation: _particleController,
+                builder: (context, child) {
+                  return CustomPaint(
+                    painter: ParticlePainter(_particles, _particleController.value),
+                    size: Size.infinite,
+                  );
+                },
+              ),
             ),
           // Gradient overlay for depth
-          Container(
-            decoration: BoxDecoration(
-              gradient: RadialGradient(
-                center: Alignment.center,
-                radius: 1.5,
-                colors: [
-                  const Color(0xFF00E676).withOpacity(0.03),
-                  Colors.transparent,
-                ],
+          IgnorePointer(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  center: Alignment.center,
+                  radius: 1.5,
+                  colors: [
+                    const Color(0xFF00E676).withOpacity(0.03),
+                    Colors.transparent,
+                  ],
+                ),
               ),
             ),
           ),
