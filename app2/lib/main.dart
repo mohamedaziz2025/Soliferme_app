@@ -33,6 +33,7 @@ void main() async {
         Provider<NotificationService>.value(value: notificationService),
         Provider<NetworkService>.value(value: networkService),
         Provider<PermissionService>.value(value: permissionService),
+        Provider<ApiService>.value(value: apiService),
         Provider<TreeService>.value(value: treeService),
       ],
       child: const MyApp(),
