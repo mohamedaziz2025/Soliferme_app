@@ -65,10 +65,28 @@ class _AdminTreeManagementState extends State<AdminTreeManagement> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const NeonText(
-                    text: 'Gestion des Arbres',
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: NeonText(
+                          text: 'Gestion des Arbres',
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/tree-analysis');
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF00E676),
+                          side: const BorderSide(color: Color(0xFF00E676)),
+                        ),
+                        icon: const Icon(Icons.settings_suggest),
+                        label: const Text('Process'),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 20),
                   Row(
