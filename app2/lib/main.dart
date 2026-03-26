@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
@@ -19,24 +20,11 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final authService = AuthService();
-  await authService.initialize();
-
-  // Initialize core services
   final networkService = NetworkService();
-  await networkService.initialize();
-
   final notificationService = NotificationService();
-  await notificationService.initialize();
-  
   final permissionService = PermissionService();
   final apiService = ApiService();
-  final treeService = TreeService(apiService); // Updated to pass apiService
-  
-  // Initialize background sync only on mobile platforms
-  if (!kIsWeb) {
-    final backgroundSyncHandler = BackgroundSyncHandler();
-    await backgroundSyncHandler.initialize();
-  }
+  final treeService = TreeService(apiService);
 
   runApp(
     MultiProvider(
@@ -50,6 +38,46 @@ void main() async {
       child: const MyApp(),
     ),
   );
+
+  // Keep startup responsive: initialize services after first frame.
+  unawaited(_initializeServices(
+    authService: authService,
+    networkService: networkService,
+    notificationService: notificationService,
+  ));
+}
+
+Future<void> _initializeServices({
+  required AuthService authService,
+  required NetworkService networkService,
+  required NotificationService notificationService,
+}) async {
+  try {
+    await authService.initialize();
+  } catch (e) {
+    debugPrint('AuthService initialization failed: $e');
+  }
+
+  try {
+    await networkService.initialize();
+  } catch (e) {
+    debugPrint('NetworkService initialization failed: $e');
+  }
+
+  try {
+    await notificationService.initialize();
+  } catch (e) {
+    debugPrint('NotificationService initialization failed: $e');
+  }
+
+  if (!kIsWeb) {
+    try {
+      final backgroundSyncHandler = BackgroundSyncHandler();
+      await backgroundSyncHandler.initialize();
+    } catch (e) {
+      debugPrint('BackgroundSyncHandler initialization failed: $e');
+    }
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -467,18 +495,46 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthWrapper extends StatelessWidget {
+class AuthWrapper extends StatefulWidget {
   const AuthWrapper({Key? key}) : super(key: key);
 
   @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  late Future<bool> _authCheckFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    final authService = Provider.of<AuthService>(context, listen: false);
+    _authCheckFuture = authService
+        .isAuthenticated()
+        .timeout(const Duration(seconds: 12), onTimeout: () => false)
+        .catchError((_) => false);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final authService = Provider.of<AuthService>(context);
     return FutureBuilder<bool>(
-      future: authService.isAuthenticated(),
+      future: _authCheckFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text(
+                    'Chargement...',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
           );
         }
 

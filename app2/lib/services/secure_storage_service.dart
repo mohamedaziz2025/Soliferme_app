@@ -1,4 +1,5 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter/services.dart';
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'dart:convert';
 
@@ -31,18 +32,26 @@ class SecureStorageService {
   }
 
   Future<void> _initializeInternal() async {
-    final key = await _storage.read(key: 'encryption_key');
-    if (key == null) {
-      // Générer une nouvelle clé si elle n'existe pas
+    var keyString = await _safeRead('encryption_key');
+
+    if (keyString == null) {
+      // Generate a new key if missing or unrecoverable.
       final newKey = encrypt.Key.fromSecureRandom(32);
-      await _storage.write(
-        key: 'encryption_key',
-        value: base64.encode(newKey.bytes),
-      );
+      keyString = base64.encode(newKey.bytes);
+      await _storage.write(key: 'encryption_key', value: keyString);
     }
 
-    final keyString = await _storage.read(key: 'encryption_key');
-    final keyBytes = base64.decode(keyString!);
+    List<int> keyBytes;
+    try {
+      keyBytes = base64.decode(keyString);
+    } catch (_) {
+      // If stored key data is corrupted, replace it with a fresh key.
+      final newKey = encrypt.Key.fromSecureRandom(32);
+      keyString = base64.encode(newKey.bytes);
+      await _storage.write(key: 'encryption_key', value: keyString);
+      keyBytes = newKey.bytes;
+    }
+
     final encryptKey = encrypt.Key(keyBytes);
     
     _iv = encrypt.IV.fromLength(16);
@@ -58,15 +67,40 @@ class SecureStorageService {
 
   Future<String?> getSecure(String key) async {
     await initialize();
-    final encrypted = await _storage.read(key: key);
+    final encrypted = await _safeRead(key);
     if (encrypted == null) return null;
     
     try {
       final decrypted = _encrypter.decrypt64(encrypted, iv: _iv);
       return decrypted;
     } catch (e) {
+      // Remove value that cannot be decrypted to avoid repeated failures.
+      await _storage.delete(key: key);
       return null;
     }
+  }
+
+  Future<String?> _safeRead(String key) async {
+    try {
+      return await _storage.read(key: key);
+    } on PlatformException catch (e) {
+      if (_isBadDecryptException(e)) {
+        // Android keystore can invalidate old encrypted entries after reinstall,
+        // backup restore, or biometric/security changes.
+        await _storage.deleteAll();
+        return null;
+      }
+      rethrow;
+    }
+  }
+
+  bool _isBadDecryptException(PlatformException e) {
+    final message = '${e.message ?? ''} ${e.details ?? ''} ${e.code}'.toLowerCase();
+    return message.contains('bad_decrypt') ||
+        message.contains('bad decrypt') ||
+        message.contains('failed to unwrap key') ||
+        message.contains('keystore') ||
+        message.contains('invalidkey');
   }
 
   Future<void> deleteSecure(String key) async {
