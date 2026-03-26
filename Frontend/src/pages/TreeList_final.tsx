@@ -54,7 +54,8 @@ import {
   Forest as ForestIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import axiosInstance from '../utils/axiosConfig';
+import { API_ENDPOINTS } from '../config/apiConfig';
 import ExcelImport from '../components/ExcelImport';
 
 // Styled Components for Futuristic Design
@@ -185,18 +186,20 @@ const TreeList = () => {
         return;
       }
 
-      let url = 'http://72.62.71.97:35000/api/trees';
+      if (userRole !== 'admin' && !userEmail) {
+        return;
+      }
+
+      let url = API_ENDPOINTS.TREES_LIST;
       if (userRole !== 'admin') {
-        url = `http://72.62.71.97:35000/api/trees/owner/${encodeURIComponent(userEmail)}`;
+        url = API_ENDPOINTS.TREE_BY_OWNER(userEmail);
       }
 
       if (showArchived && userRole === 'admin') {
         url += '?showArchived=true';
       }
 
-      const response = await axios.get(url, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await axiosInstance.get(url);
       
       if (response.data && typeof response.data === 'object') {
         if (response.data.trees && Array.isArray(response.data.trees)) {

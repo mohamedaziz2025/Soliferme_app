@@ -1,8 +1,9 @@
 import axios from 'axios';
+import { API_BASE_URL } from '../config/apiConfig';
 
 // Create axios instance with default config
 const axiosInstance = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://72.62.71.97:35000',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },

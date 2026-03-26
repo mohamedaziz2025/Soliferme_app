@@ -250,10 +250,35 @@ class _TreeDetailsScreenState extends State<TreeDetailsScreen> {
                                   ),
                                 );
                                 if (result != null && result > 0) {
+                                  final previous = treeData['measurements']?['height'];
                                   setState(() {
                                     treeData['measurements'] ??= {};
                                     treeData['measurements']['height'] = result;
                                   });
+                                  try {
+                                    final treeService = Provider.of<TreeService>(context, listen: false);
+                                    await treeService.updateTree(widget.treeId, {
+                                      'measurements': {
+                                        'height': result,
+                                        'width': treeData['measurements']?['width'] ?? 0,
+                                        'approximateShape': treeData['measurements']?['approximateShape'] ?? '',
+                                      }
+                                    });
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Hauteur mise a jour avec succes')),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    setState(() {
+                                      treeData['measurements']['height'] = previous;
+                                    });
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Erreur mise a jour hauteur: $e')),
+                                      );
+                                    }
+                                  }
                                 }
                               },
                             ),
@@ -279,10 +304,35 @@ class _TreeDetailsScreenState extends State<TreeDetailsScreen> {
                                   ),
                                 );
                                 if (result != null && result > 0) {
+                                  final previous = treeData['measurements']?['width'];
                                   setState(() {
                                     treeData['measurements'] ??= {};
                                     treeData['measurements']['width'] = result;
                                   });
+                                  try {
+                                    final treeService = Provider.of<TreeService>(context, listen: false);
+                                    await treeService.updateTree(widget.treeId, {
+                                      'measurements': {
+                                        'height': treeData['measurements']?['height'] ?? 0,
+                                        'width': result,
+                                        'approximateShape': treeData['measurements']?['approximateShape'] ?? '',
+                                      }
+                                    });
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Largeur mise a jour avec succes')),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    setState(() {
+                                      treeData['measurements']['width'] = previous;
+                                    });
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Erreur mise a jour largeur: $e')),
+                                      );
+                                    }
+                                  }
                                 }
                               },
                             ),

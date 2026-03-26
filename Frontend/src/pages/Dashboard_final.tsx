@@ -53,7 +53,8 @@ import {
   CategoryScale,
 } from 'chart.js';
 import { Line, Pie } from 'react-chartjs-2';
-import axios from 'axios';
+import axiosInstance from '../utils/axiosConfig';
+import { API_ENDPOINTS } from '../config/apiConfig';
 
 ChartJS.register(
   CategoryScale,
@@ -184,20 +185,17 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Token manquant');
-      }
-
-      const response = await axios.get('http://72.62.71.97:35000/api/dashboard', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await axiosInstance.get(API_ENDPOINTS.DASHBOARD);
 
       setData(response.data);
       setError('');
     } catch (error: any) {
       console.error('Error fetching dashboard data:', error);
-      setError('Erreur lors du chargement des données du tableau de bord');
+      if (error.response?.status === 401) {
+        setError('Session expirée, veuillez vous reconnecter.');
+      } else {
+        setError('Erreur lors du chargement des données du tableau de bord');
+      }
     } finally {
       setLoading(false);
     }

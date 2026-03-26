@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/tree_service.dart';
+import '../services/auth_service.dart';
 import '../widgets/glassmorphism_widgets.dart';
 
 class AdminAddTreeScreen extends StatefulWidget {
@@ -16,6 +17,7 @@ class _AdminAddTreeScreenState extends State<AdminAddTreeScreen> {
   String? _errorMessage;
 
   final Map<String, dynamic> _treeData = {
+    'treeId': '',
     'treeType': '',
     'status': 'healthy',
     'location': {
@@ -44,6 +46,23 @@ class _AdminAddTreeScreenState extends State<AdminAddTreeScreen> {
     });
 
     try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final email = authService.email;
+      final fullName = (authService.userData?['name'] ?? '').toString().trim();
+      final nameParts = fullName.isEmpty ? <String>[] : fullName.split(RegExp(r'\s+'));
+      final firstName = nameParts.isNotEmpty ? nameParts.first : 'Admin';
+      final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : 'User';
+
+      if (email == null || email.isEmpty) {
+        throw Exception('Utilisateur non authentifie. Veuillez vous reconnecter.');
+      }
+
+      _treeData['owner'] = {
+        'firstName': firstName,
+        'lastName': lastName,
+        'email': email,
+      };
+
       final treeService = Provider.of<TreeService>(context, listen: false);
       await treeService.addTree(_treeData);
       
@@ -113,6 +132,33 @@ class _AdminAddTreeScreenState extends State<AdminAddTreeScreen> {
                       TextFormField(
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
+                          labelText: 'ID de l\'arbre',
+                          labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+                          hintText: 'Ex: 1001',
+                          hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: const BorderSide(color: Color(0xFF00E676)),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'L\'ID de l\'arbre est requis';
+                          }
+                          return null;
+                        },
+                        onSaved: (value) {
+                          _treeData['treeId'] = value!.trim();
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
                           labelText: 'Type d\'arbre',
                           labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
                           hintText: 'Ex: Pommier, Poirier...',
@@ -163,6 +209,92 @@ class _AdminAddTreeScreenState extends State<AdminAddTreeScreen> {
                             _treeData['status'] = value;
                           });
                         },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                GlassmorphismContainer(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const NeonText(
+                        text: 'Localisation GPS',
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              style: const TextStyle(color: Colors.white),
+                              decoration: InputDecoration(
+                                labelText: 'Latitude',
+                                labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+                                hintText: 'Ex: 14.6928',
+                                hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                                enabledBorder: OutlineInputBorder(
+                                  borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderSide: const BorderSide(color: Color(0xFF00E676)),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Latitude requise';
+                                }
+                                final lat = double.tryParse(value);
+                                if (lat == null || lat < -90 || lat > 90) {
+                                  return 'Latitude invalide';
+                                }
+                                return null;
+                              },
+                              onSaved: (value) {
+                                _treeData['location']['latitude'] = double.parse(value!);
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: TextFormField(
+                              style: const TextStyle(color: Colors.white),
+                              decoration: InputDecoration(
+                                labelText: 'Longitude',
+                                labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+                                hintText: 'Ex: -17.4467',
+                                hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                                enabledBorder: OutlineInputBorder(
+                                  borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderSide: const BorderSide(color: Color(0xFF00E676)),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Longitude requise';
+                                }
+                                final lon = double.tryParse(value);
+                                if (lon == null || lon < -180 || lon > 180) {
+                                  return 'Longitude invalide';
+                                }
+                                return null;
+                              },
+                              onSaved: (value) {
+                                _treeData['location']['longitude'] = double.parse(value!);
+                              },
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

@@ -229,8 +229,12 @@ const App = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+    sessionStorage.removeItem('token');
     setIsAuthenticated(false);
     setUserRole(null);
+    window.location.href = '/login';
   };
 
   return (

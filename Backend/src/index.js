@@ -23,7 +23,7 @@ const logger = winston.createLogger({
   ]
 });
 const bcrypt = require('bcryptjs');
-const { User } = require('./models/schema');
+const { User, Tree } = require('./models/schema');
 
 const app = express();
 
@@ -84,11 +84,11 @@ async function initializeAdmin() {
     const adminEmail = 'admin@fruitytrack.com';
     const defaultPassword = 'Admin123!';
     
-    const existingAdmin = await User.findOne({ email: adminEmail });
+    let adminUser = await User.findOne({ email: adminEmail });
     
-    if (!existingAdmin) {
+    if (!adminUser) {
       const hashedPassword = await bcrypt.hash(defaultPassword, 12);
-      const admin = new User({
+      adminUser = new User({
         email: adminEmail,
         password: hashedPassword,
         name: 'Admin',
@@ -96,13 +96,90 @@ async function initializeAdmin() {
         language: 'fr'
       });
       
-      await admin.save();
+      await adminUser.save();
       console.log('Admin par défaut créé avec succès');
       console.log('Email: admin@fruitytrack.com');
       console.log('Mot de passe: Admin123!');
     }
+
+    return adminUser;
   } catch (error) {
     console.error('Erreur lors de la création de l\'admin:', error);
+    return null;
+  }
+}
+
+async function initializeTestTrees(adminUser) {
+  try {
+    if (!adminUser) {
+      console.warn('⚠️  Seeding des arbres de test ignoré: admin introuvable');
+      return;
+    }
+
+    const testTrees = [
+      {
+        treeId: 'TEST-SERVER-001',
+        treeType: 'Manguier',
+        ownerId: adminUser._id,
+        ownerInfo: {
+          firstName: 'Admin',
+          lastName: 'FruityTrack',
+          email: adminUser.email
+        },
+        location: { latitude: 14.6928, longitude: -17.4467 },
+        measurements: { height: 4.2, width: 175, approximateShape: 'ovale' },
+        fruits: { present: true, estimatedQuantity: 28, lastAnalysisDate: new Date() },
+        status: 'healthy',
+        isArchived: false
+      },
+      {
+        treeId: 'TEST-SERVER-002',
+        treeType: 'Oranger',
+        ownerId: adminUser._id,
+        ownerInfo: {
+          firstName: 'Admin',
+          lastName: 'FruityTrack',
+          email: adminUser.email
+        },
+        location: { latitude: 14.6951, longitude: -17.4559 },
+        measurements: { height: 3.1, width: 142, approximateShape: 'ronde' },
+        fruits: { present: true, estimatedQuantity: 16, lastAnalysisDate: new Date() },
+        status: 'warning',
+        isArchived: false
+      },
+      {
+        treeId: 'TEST-SERVER-003',
+        treeType: 'Citronnier',
+        ownerId: adminUser._id,
+        ownerInfo: {
+          firstName: 'Admin',
+          lastName: 'FruityTrack',
+          email: adminUser.email
+        },
+        location: { latitude: 14.7012, longitude: -17.4622 },
+        measurements: { height: 2.8, width: 125, approximateShape: 'conique' },
+        fruits: { present: false, estimatedQuantity: 0, lastAnalysisDate: new Date() },
+        status: 'critical',
+        isArchived: false
+      }
+    ];
+
+    let createdCount = 0;
+    for (const tree of testTrees) {
+      const existingTree = await Tree.findOne({ treeId: tree.treeId });
+      if (!existingTree) {
+        await Tree.create(tree);
+        createdCount += 1;
+      }
+    }
+
+    if (createdCount > 0) {
+      console.log(`🌱 ${createdCount} arbre(s) de test créé(s) au démarrage`);
+    } else {
+      console.log('🌱 Arbres de test déjà présents, aucun ajout nécessaire');
+    }
+  } catch (error) {
+    console.error('Erreur lors du seeding des arbres de test:', error);
   }
 }
 
@@ -122,7 +199,8 @@ mongoose.connect(mongoUri, {
 })
 .then(() => {
   console.log('✅ Connected to MongoDB Atlas');
-  initializeAdmin(); // Initialise l'admin après la connexion
+  initializeAdmin()
+    .then((adminUser) => initializeTestTrees(adminUser));
 })
 .catch(err => {
   console.error('❌ MongoDB connection error:', err.message);
