@@ -2,6 +2,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/services.dart';
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'dart:convert';
+import 'dart:typed_data';
 
 class SecureStorageService {
   static final SecureStorageService _instance = SecureStorageService._internal();
@@ -41,15 +42,15 @@ class SecureStorageService {
       await _storage.write(key: 'encryption_key', value: keyString);
     }
 
-    List<int> keyBytes;
+    Uint8List keyBytes;
     try {
-      keyBytes = base64.decode(keyString);
+      keyBytes = Uint8List.fromList(base64.decode(keyString));
     } catch (_) {
       // If stored key data is corrupted, replace it with a fresh key.
       final newKey = encrypt.Key.fromSecureRandom(32);
       keyString = base64.encode(newKey.bytes);
       await _storage.write(key: 'encryption_key', value: keyString);
-      keyBytes = newKey.bytes;
+      keyBytes = Uint8List.fromList(newKey.bytes);
     }
 
     final encryptKey = encrypt.Key(keyBytes);
