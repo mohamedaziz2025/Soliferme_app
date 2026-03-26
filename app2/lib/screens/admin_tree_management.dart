@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'ar_measurement_screen.dart';
 import '../services/tree_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/glassmorphism_widgets.dart';
@@ -42,6 +43,52 @@ class _AdminTreeManagementState extends State<AdminTreeManagement> {
     }
   }
 
+  Future<void> _openArProcess() async {
+    if (_filteredTrees.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Aucun arbre disponible pour la mesure AR'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    String? selectedTreeId;
+    if (_filteredTrees.length == 1) {
+      selectedTreeId = _filteredTrees.first['treeId']?.toString();
+    } else {
+      selectedTreeId = await showModalBottomSheet<String>(
+        context: context,
+        builder: (context) => SafeArea(
+          child: ListView.builder(
+            itemCount: _filteredTrees.length,
+            itemBuilder: (context, index) {
+              final tree = _filteredTrees[index];
+              final treeType = tree['treeType']?.toString() ?? 'Arbre';
+              final treeId = tree['treeId']?.toString() ?? '';
+              return ListTile(
+                leading: const Icon(Icons.forest),
+                title: Text(treeType),
+                subtitle: Text(treeId),
+                onTap: () => Navigator.pop(context, treeId),
+              );
+            },
+          ),
+        ),
+      );
+    }
+
+    if (!mounted || selectedTreeId == null || selectedTreeId.isEmpty) return;
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ARMeasurementScreen(treeId: selectedTreeId!),
+      ),
+    );
+  }
+
   List<Map<String, dynamic>> get _filteredTrees {
     return _trees.where((tree) {
       final matchesSearch = 
@@ -76,9 +123,7 @@ class _AdminTreeManagementState extends State<AdminTreeManagement> {
                       ),
                       const SizedBox(width: 12),
                       OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/tree-analysis');
-                        },
+                        onPressed: _openArProcess,
                         style: OutlinedButton.styleFrom(
                           foregroundColor: const Color(0xFF00E676),
                           side: const BorderSide(color: Color(0xFF00E676)),
