@@ -58,6 +58,7 @@ class _AdminTreeManagementState extends State<AdminTreeManagement> {
     if (_filteredTrees.length == 1) {
       selectedTreeId = _filteredTrees.first['treeId']?.toString();
     } else {
+      if (!mounted) return;
       selectedTreeId = await showModalBottomSheet<String>(
         context: context,
         builder: (context) => SafeArea(
