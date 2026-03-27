@@ -38,7 +38,7 @@ Intégration des fonctionnalités de l'application mobile dans le frontend web a
   - Type d'arbre détecté
   - État de santé
   - Niveau de confiance
-  - Maladies détectées
+  - Maladies détect
   - Recommandations
 - Matching automatique avec arbres existants
 - Historique des analyses

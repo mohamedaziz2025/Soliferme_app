@@ -35,11 +35,7 @@ import {
   Close as CloseIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
-import axios from 'axios';
 import axiosInstance from '../utils/axiosConfig';
-import { API_ENDPOINTS } from '../config/apiConfig';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:35000';
 
 interface AnalysisResult {
   tree_type?: string;

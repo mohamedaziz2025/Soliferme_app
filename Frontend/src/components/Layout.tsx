@@ -30,16 +30,13 @@ import {
   Map, 
   Dashboard, 
   Group,
-  AccountCircle,
   Menu as MenuIcon,
   Close as CloseIcon,
-  CameraAlt as CameraIcon,
   AdminPanelSettings as AdminIcon,
   History as HistoryIcon,
   ExpandLess,
   ExpandMore,
   LocalFlorist as TreeManageIcon,
-  Straighten as MeasureIcon,
 } from '@mui/icons-material';
 
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
@@ -72,8 +69,6 @@ const menuItems: NavMenuItem[] = [
   { text: 'Tableau de bord', icon: <Dashboard />, path: '/dashboard' },
   { text: 'Liste des arbres', icon: <Forest />, path: '/trees' },
   { text: 'Carte', icon: <Map />, path: '/map' },
-  { text: 'Scanner', icon: <CameraIcon />, path: '/analysis/scan' },
-  { text: 'Mesure AR', icon: <MeasureIcon />, path: '/ar-measurement' },
 ];
 
 const adminMenuItems: NavMenuItem[] = [
@@ -94,7 +89,6 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [adminAnchorEl, setAdminAnchorEl] = useState<null | HTMLElement>(null);
-  const [profileAnchorEl, setProfileAnchorEl] = useState<null | HTMLElement>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [adminMenuOpen, setAdminMenuOpen] = useState(false);
 
@@ -106,17 +100,8 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
     setAdminAnchorEl(null);
   };
 
-  const handleProfileMenu = (event: React.MouseEvent<HTMLElement>) => {
-    setProfileAnchorEl(event.currentTarget);
-  };
-
-  const handleProfileMenuClose = () => {
-    setProfileAnchorEl(null);
-  };
-
   const handleLogout = () => {
     handleAdminMenuClose();
-    handleProfileMenuClose();
     setDrawerOpen(false);
     onLogout();
   };
@@ -188,14 +173,30 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
         </>
       )}
 
-      <IconButton
-        size="large"
+      <NavButton
         color="inherit"
-        onClick={handleProfileMenu}
-        sx={{ ml: 2, color: theme.palette.text.primary }}
+        {...({ component: RouterLink, to: "/profile" } as any)}
+        startIcon={<Person />}
+        sx={{
+          ml: 1,
+          color: isActivePath('/profile')
+            ? theme.palette.primary.main
+            : theme.palette.text.primary,
+          fontWeight: isActivePath('/profile') ? 700 : 600,
+        }}
       >
-        <AccountCircle />
-      </IconButton>
+        Profil
+      </NavButton>
+      <NavButton
+        color="inherit"
+        onClick={handleLogout}
+        startIcon={<ExitToApp />}
+        sx={{
+          color: theme.palette.text.primary,
+        }}
+      >
+        Déconnexion
+      </NavButton>
     </Box>
   );
 
@@ -412,48 +413,6 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
         {children}
       </Container>
 
-      {/* Profile Menu for Desktop */}
-      {isAuthenticated && !isMobile && (
-          <Menu
-          anchorEl={profileAnchorEl}
-          anchorOrigin={{
-            vertical: 'bottom',
-            horizontal: 'right',
-          }}
-          keepMounted
-          transformOrigin={{
-            vertical: 'top',
-            horizontal: 'right',
-          }}
-          open={Boolean(profileAnchorEl)}
-          onClose={handleProfileMenuClose}
-          PaperProps={{
-            sx: {
-              borderRadius: 2,
-              mt: 1,
-              minWidth: 180,
-            }
-          }}
-        >
-          <MenuItem 
-            onClick={handleProfileMenuClose}
-            {...({ component: RouterLink, to: "/profile" } as any)}
-            sx={{ textDecoration: 'none' }}
-          >
-            <ListItemIcon>
-              <Person fontSize="small" />
-            </ListItemIcon>
-            Profil
-          </MenuItem>
-          <Divider />
-          <MenuItem onClick={handleLogout}>
-            <ListItemIcon>
-              <ExitToApp fontSize="small" />
-            </ListItemIcon>
-            Déconnexion
-          </MenuItem>
-        </Menu>
-      )}
     </>
   );
 };

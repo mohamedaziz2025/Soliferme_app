@@ -5,7 +5,7 @@
  */
 
 // Configuration de base
-export const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:35000';
+export const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
 // Services internes
 export const BACKEND_API = {
@@ -73,7 +73,7 @@ export const getBackendUrl = (): string => {
  * Vérifier si on est en mode développement local
  */
 export const isLocalDevelopment = (): boolean => {
-  return API_BASE_URL.includes('localhost') || API_BASE_URL.includes('127.0.0.1');
+  return process.env.NODE_ENV === 'development';
 };
 
 /**
