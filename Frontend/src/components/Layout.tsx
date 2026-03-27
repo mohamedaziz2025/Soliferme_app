@@ -60,15 +60,15 @@ const NavButton = styled(Button)(({ theme }) => ({
   },
 }));
 
-interface MenuItem {
+interface NavMenuItem {
   text: string;
   icon: React.ReactNode;
   path: string;
   adminOnly?: boolean;
-  children?: MenuItem[];
+  children?: NavMenuItem[];
 }
 
-const menuItems: MenuItem[] = [
+const menuItems: NavMenuItem[] = [
   { text: 'Tableau de bord', icon: <Dashboard />, path: '/dashboard' },
   { text: 'Liste des arbres', icon: <Forest />, path: '/trees' },
   { text: 'Carte', icon: <Map />, path: '/map' },
@@ -76,7 +76,7 @@ const menuItems: MenuItem[] = [
   { text: 'Mesure AR', icon: <MeasureIcon />, path: '/ar-measurement' },
 ];
 
-const adminMenuItems: MenuItem[] = [
+const adminMenuItems: NavMenuItem[] = [
   { text: 'Gestion utilisateurs', icon: <Group />, path: '/users', adminOnly: true },
   { text: 'Gestion arbres', icon: <TreeManageIcon />, path: '/admin/trees', adminOnly: true },
   { text: 'Historique analyses', icon: <HistoryIcon />, path: '/analysis-history', adminOnly: true },
@@ -93,20 +93,30 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [adminAnchorEl, setAdminAnchorEl] = useState<null | HTMLElement>(null);
+  const [profileAnchorEl, setProfileAnchorEl] = useState<null | HTMLElement>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [adminMenuOpen, setAdminMenuOpen] = useState(false);
 
-  const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
+  const handleAdminMenu = (event: React.MouseEvent<HTMLElement>) => {
+    setAdminAnchorEl(event.currentTarget);
   };
 
-  const handleClose = () => {
-    setAnchorEl(null);
+  const handleAdminMenuClose = () => {
+    setAdminAnchorEl(null);
+  };
+
+  const handleProfileMenu = (event: React.MouseEvent<HTMLElement>) => {
+    setProfileAnchorEl(event.currentTarget);
+  };
+
+  const handleProfileMenuClose = () => {
+    setProfileAnchorEl(null);
   };
 
   const handleLogout = () => {
-    handleClose();
+    handleAdminMenuClose();
+    handleProfileMenuClose();
     setDrawerOpen(false);
     onLogout();
   };
@@ -138,11 +148,11 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
       
       {userRole === 'admin' && (
         <>
-          <NavButton
-            color="inherit"
-            onClick={handleMenu}
-            endIcon={Boolean(anchorEl) ? <ExpandLess /> : <ExpandMore />}
-            startIcon={<AdminIcon />}
+            <NavButton
+              color="inherit"
+              onClick={handleAdminMenu}
+              endIcon={Boolean(adminAnchorEl) ? <ExpandLess /> : <ExpandMore />}
+              startIcon={<AdminIcon />}
             sx={{ 
               color: adminMenuItems.some(item => isActivePath(item.path))
                 ? theme.palette.primary.main 
@@ -152,9 +162,9 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
             Admin
           </NavButton>
           <Menu
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl)}
-            onClose={handleClose}
+            anchorEl={adminAnchorEl}
+            open={Boolean(adminAnchorEl)}
+            onClose={handleAdminMenuClose}
             PaperProps={{
               sx: {
                 borderRadius: 2,
@@ -167,7 +177,7 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
               <MenuItem 
                 key={item.text}
                 {...({ component: RouterLink, to: item.path } as any)}
-                onClick={handleClose}
+                onClick={handleAdminMenuClose}
                 selected={isActivePath(item.path)}
               >
                 <ListItemIcon>{item.icon}</ListItemIcon>
@@ -181,7 +191,7 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
       <IconButton
         size="large"
         color="inherit"
-        onClick={handleMenu}
+        onClick={handleProfileMenu}
         sx={{ ml: 2, color: theme.palette.text.primary }}
       >
         <AccountCircle />
@@ -404,8 +414,8 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
 
       {/* Profile Menu for Desktop */}
       {isAuthenticated && !isMobile && (
-        <Menu
-          anchorEl={anchorEl}
+          <Menu
+          anchorEl={profileAnchorEl}
           anchorOrigin={{
             vertical: 'bottom',
             horizontal: 'right',
@@ -415,8 +425,8 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
             vertical: 'top',
             horizontal: 'right',
           }}
-          open={Boolean(anchorEl)}
-          onClose={handleClose}
+          open={Boolean(profileAnchorEl)}
+          onClose={handleProfileMenuClose}
           PaperProps={{
             sx: {
               borderRadius: 2,
@@ -426,7 +436,7 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
           }}
         >
           <MenuItem 
-            onClick={handleClose}
+            onClick={handleProfileMenuClose}
             {...({ component: RouterLink, to: "/profile" } as any)}
             sx={{ textDecoration: 'none' }}
           >
