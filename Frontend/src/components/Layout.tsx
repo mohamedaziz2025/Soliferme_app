@@ -60,15 +60,15 @@ const NavButton = styled(Button)(({ theme }) => ({
   },
 }));
 
-interface MenuItem {
+interface NavMenuItem {
   text: string;
   icon: React.ReactNode;
   path: string;
   adminOnly?: boolean;
-  children?: MenuItem[];
+  children?: NavMenuItem[];
 }
 
-const menuItems: MenuItem[] = [
+const menuItems: NavMenuItem[] = [
   { text: 'Tableau de bord', icon: <Dashboard />, path: '/dashboard' },
   { text: 'Liste des arbres', icon: <Forest />, path: '/trees' },
   { text: 'Carte', icon: <Map />, path: '/map' },
@@ -76,7 +76,7 @@ const menuItems: MenuItem[] = [
   { text: 'Mesure AR', icon: <MeasureIcon />, path: '/ar-measurement' },
 ];
 
-const adminMenuItems: MenuItem[] = [
+const adminMenuItems: NavMenuItem[] = [
   { text: 'Gestion utilisateurs', icon: <Group />, path: '/users', adminOnly: true },
   { text: 'Gestion arbres', icon: <TreeManageIcon />, path: '/admin/trees', adminOnly: true },
   { text: 'Historique analyses', icon: <HistoryIcon />, path: '/analysis-history', adminOnly: true },
