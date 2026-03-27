@@ -41,9 +41,9 @@ class SecureStorageService {
       await _storage.write(key: 'encryption_key', value: keyString);
     }
 
-    List<int> keyBytes;
+    Uint8List keyBytes;
     try {
-      keyBytes = base64.decode(keyString);
+      keyBytes = Uint8List.fromList(base64.decode(keyString));
     } catch (_) {
       // If stored key data is corrupted, replace it with a fresh key.
       final newKey = encrypt.Key.fromSecureRandom(32);
