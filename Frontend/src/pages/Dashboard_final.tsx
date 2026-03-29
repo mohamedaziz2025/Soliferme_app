@@ -43,6 +43,7 @@ import {
 } from '@mui/icons-material';
 import {
   Chart as ChartJS,
+  CategoryScale,
   LinearScale,
   PointElement,
   LineElement,
@@ -50,7 +51,6 @@ import {
   Tooltip as ChartTooltip,
   Legend,
   ArcElement,
-  CategoryScale,
 } from 'chart.js';
 import { Line, Pie } from 'react-chartjs-2';
 import axiosInstance from '../utils/axiosConfig';
@@ -160,6 +160,65 @@ interface DashboardData {
   recentActivities: any[];
 }
 
+const EMPTY_TREE_STATS: TreeStats = {
+  total: 0,
+  healthy: 0,
+  warning: 0,
+  critical: 0,
+  archived: 0,
+  incomplete: 0,
+  complete: 0,
+};
+
+const EMPTY_USER_STATS: UserStats = {
+  total: 0,
+  admin: 0,
+  user: 0,
+};
+
+type DashboardPayload = Partial<DashboardData> & {
+  treeStats?: Partial<TreeStats>;
+  userStats?: Partial<UserStats>;
+  data?: Partial<DashboardData> & {
+    treeStats?: Partial<TreeStats>;
+    userStats?: Partial<UserStats>;
+  };
+};
+
+const toSafeNumber = (value: unknown): number => {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const normalizeDashboardData = (payload: DashboardPayload | null | undefined): DashboardData => {
+  const nested = payload?.data;
+  const source =
+    nested && (nested.trees || nested.treeStats || nested.users || nested.userStats || nested.recentActivities)
+      ? nested
+      : payload ?? {};
+
+  const treeSource = source.trees ?? source.treeStats ?? {};
+  const userSource = source.users ?? source.userStats ?? {};
+
+  return {
+    trees: {
+      total: toSafeNumber(treeSource.total),
+      healthy: toSafeNumber(treeSource.healthy),
+      warning: toSafeNumber(treeSource.warning),
+      critical: toSafeNumber(treeSource.critical),
+      archived: toSafeNumber(treeSource.archived),
+      incomplete: toSafeNumber(treeSource.incomplete),
+      complete: toSafeNumber(treeSource.complete),
+    },
+    users: {
+      total: toSafeNumber(userSource.total),
+      admin: toSafeNumber(userSource.admin),
+      user: toSafeNumber(userSource.user),
+    },
+    recentActivities: Array.isArray(source.recentActivities) ? source.recentActivities : [],
+  };
+};
+
 const Dashboard = () => {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -187,7 +246,7 @@ const Dashboard = () => {
       setLoading(true);
       const response = await axiosInstance.get(API_ENDPOINTS.DASHBOARD);
 
-      setData(response.data);
+      setData(normalizeDashboardData(response.data));
       setError('');
     } catch (error: any) {
       console.error('Error fetching dashboard data:', error);
@@ -221,12 +280,15 @@ const Dashboard = () => {
 
   if (!data) return null;
 
+  const trees = data.trees ?? EMPTY_TREE_STATS;
+  const users = data.users ?? EMPTY_USER_STATS;
+
   // Configuration des graphiques
   const pieChartData = {
     labels: ['En bonne santé', 'À surveiller', 'Critique', 'Archivés'],
     datasets: [
       {
-        data: [data.trees.healthy, data.trees.warning, data.trees.critical, data.trees.archived],
+        data: [trees.healthy, trees.warning, trees.critical, trees.archived],
         backgroundColor: [
           alpha('#00ff88', 0.8),
           alpha('#ffaa00', 0.8),
@@ -288,8 +350,8 @@ const Dashboard = () => {
   };
 
   const calculateCompletionRate = () => {
-    const complete = data.trees.complete || 0;
-    const incomplete = data.trees.incomplete || 0;
+    const complete = trees.complete || 0;
+    const incomplete = trees.incomplete || 0;
     const total = complete + incomplete;
     return total > 0 ? Math.round((complete / total) * 100) : 0;
   };
@@ -349,28 +411,28 @@ const Dashboard = () => {
             {[
               { 
                 title: 'Total Arbres',
-                value: data.trees.total,
+                value: trees.total,
                 icon: DataUsageIcon,
                 color: theme.palette.primary.main,
                 trend: '+12%'
               },
               { 
                 title: 'En Santé',
-                value: data.trees.healthy,
+                value: trees.healthy,
                 icon: CheckCircle,
                 color: '#00ff88',
                 trend: '+8%'
               },
               { 
                 title: 'À Surveiller',
-                value: data.trees.warning,
+                value: trees.warning,
                 icon: VisibilityIcon,
                 color: '#ffaa00',
                 trend: '-3%'
               },
               { 
                 title: 'Critiques',
-                value: data.trees.critical,
+                value: trees.critical,
                 icon: ErrorOutline,
                 color: '#ff4444',
                 trend: '-15%'
@@ -414,7 +476,7 @@ const Dashboard = () => {
                       </Typography>
                       
                       <LinearProgress
-                        value={data.trees.total > 0 ? (stat.value / data.trees.total) * 100 : 0}
+                        value={trees.total > 0 ? (stat.value / trees.total) * 100 : 0}
                         variant="determinate"
                         sx={{
                           height: 8,
@@ -435,7 +497,7 @@ const Dashboard = () => {
         </Grid>
 
         {/* Qualité des données */}
-        {userRole === 'admin' && (data.trees.complete !== undefined || data.trees.incomplete !== undefined) && (
+        {userRole === 'admin' && (trees.complete !== undefined || trees.incomplete !== undefined) && (
           <Grid item xs={12} md={6}>
             <Fade in timeout={1800}>
               <GlassmorphicPaper sx={{ p: 3, height: 350 }}>
@@ -466,7 +528,7 @@ const Dashboard = () => {
                         <CheckCircle />
                       </Avatar>
                       <Typography variant="h5" sx={{ color: '#00ff88', fontWeight: 700 }}>
-                        {data.trees.complete || 0}
+                        {trees.complete || 0}
                       </Typography>
                       <Typography variant="body2" color="textSecondary">
                         Données Complètes
@@ -486,7 +548,7 @@ const Dashboard = () => {
                         <ErrorOutline />
                       </Avatar>
                       <Typography variant="h5" sx={{ color: '#ffaa00', fontWeight: 700 }}>
-                        {data.trees.incomplete || 0}
+                        {trees.incomplete || 0}
                       </Typography>
                       <Typography variant="body2" color="textSecondary">
                         Données Incomplètes
@@ -519,7 +581,7 @@ const Dashboard = () => {
         )}
 
         {/* Graphique en secteurs */}
-        <Grid item xs={12} md={userRole === 'admin' && (data.trees.complete !== undefined || data.trees.incomplete !== undefined) ? 6 : 6}>
+        <Grid item xs={12} md={userRole === 'admin' && (trees.complete !== undefined || trees.incomplete !== undefined) ? 6 : 6}>
           <Fade in timeout={2000}>
             <CyberChart sx={{ p: 3, height: 350 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
@@ -574,7 +636,7 @@ const Dashboard = () => {
                           </Avatar>
                           <Box>
                             <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                              {data.users.total}
+                              {users.total}
                             </Typography>
                             <Typography variant="body2" color="textSecondary">
                               Total Utilisateurs
@@ -597,7 +659,7 @@ const Dashboard = () => {
                         <AdminPanelSettings sx={{ fontSize: 20 }} />
                       </Avatar>
                       <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                        {data.users.admin}
+                        {users.admin}
                       </Typography>
                       <Typography variant="caption" color="textSecondary">
                         Administrateurs
@@ -616,7 +678,7 @@ const Dashboard = () => {
                         <People sx={{ fontSize: 20 }} />
                       </Avatar>
                       <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                        {data.users.user}
+                        {users.user}
                       </Typography>
                       <Typography variant="caption" color="textSecondary">
                         Utilisateurs
