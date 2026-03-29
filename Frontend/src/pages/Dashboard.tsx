@@ -159,6 +159,49 @@ interface DashboardData {
   recentActivities: any[];
 }
 
+type DashboardPayload = Partial<DashboardData> & {
+  treeStats?: Partial<TreeStats>;
+  userStats?: Partial<UserStats>;
+  data?: Partial<DashboardData> & {
+    treeStats?: Partial<TreeStats>;
+    userStats?: Partial<UserStats>;
+  };
+};
+
+const toSafeNumber = (value: unknown): number => {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const normalizeDashboardData = (payload: DashboardPayload | null | undefined): DashboardData => {
+  const nested = payload?.data;
+  const source =
+    nested && (nested.trees || nested.treeStats || nested.users || nested.userStats || nested.recentActivities)
+      ? nested
+      : payload ?? {};
+
+  const treeSource = source.trees ?? source.treeStats ?? {};
+  const userSource = source.users ?? source.userStats ?? {};
+
+  return {
+    trees: {
+      total: toSafeNumber(treeSource.total),
+      healthy: toSafeNumber(treeSource.healthy),
+      warning: toSafeNumber(treeSource.warning),
+      critical: toSafeNumber(treeSource.critical),
+      archived: toSafeNumber(treeSource.archived),
+      incomplete: toSafeNumber(treeSource.incomplete),
+      complete: toSafeNumber(treeSource.complete),
+    },
+    users: {
+      total: toSafeNumber(userSource.total),
+      admin: toSafeNumber(userSource.admin),
+      user: toSafeNumber(userSource.user),
+    },
+    recentActivities: Array.isArray(source.recentActivities) ? source.recentActivities : [],
+  };
+};
+
 const Dashboard = () => {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -193,7 +236,7 @@ const Dashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      setData(response.data);
+      setData(normalizeDashboardData(response.data));
       setError('');
     } catch (error: any) {
       console.error('Error fetching dashboard data:', error);
