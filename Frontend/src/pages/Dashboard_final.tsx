@@ -17,29 +17,19 @@ import {
   LinearProgress,
   Chip,
   Badge,
-  Tooltip,
 } from '@mui/material';
 import {
-  Streetview as TreeIcon,
-  LocalFlorist,
-  Warning,
-  Analytics,
   People,
   AdminPanelSettings,
-  Archive,
   Assessment,
   TrendingUp,
-  Nature,
   CheckCircle,
   ErrorOutline,
   Insights as InsightsIcon,
   AutoAwesome as AutoAwesomeIcon,
-  Speed as SpeedIcon,
   DataUsage as DataUsageIcon,
   Visibility as VisibilityIcon,
-  Forest as ForestIcon,
   Dashboard as DashboardIcon,
-  LocationOn as LocationOnIcon,
 } from '@mui/icons-material';
 import {
   Chart as ChartJS,
@@ -157,6 +147,10 @@ interface UserStats {
 interface DashboardData {
   trees: TreeStats;
   users: UserStats;
+  monthlyGrowth: {
+    labels: string[];
+    data: number[];
+  };
   recentActivities: any[];
 }
 
@@ -179,15 +173,84 @@ const EMPTY_USER_STATS: UserStats = {
 type DashboardPayload = Partial<DashboardData> & {
   treeStats?: Partial<TreeStats>;
   userStats?: Partial<UserStats>;
+  monthlyGrowth?: {
+    labels?: unknown;
+    data?: unknown;
+  };
   data?: Partial<DashboardData> & {
     treeStats?: Partial<TreeStats>;
     userStats?: Partial<UserStats>;
+    monthlyGrowth?: {
+      labels?: unknown;
+      data?: unknown;
+    };
   };
 };
 
 const toSafeNumber = (value: unknown): number => {
   const parsed = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const DEFAULT_MONTH_LABELS = ['Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Jun'];
+
+const normalizeMonthlyGrowth = (value: unknown) => {
+  if (value && typeof value === 'object') {
+    const candidate = value as { labels?: unknown; data?: unknown };
+    const labels = Array.isArray(candidate.labels)
+      ? candidate.labels.map((item) => String(item))
+      : [];
+    const data = Array.isArray(candidate.data)
+      ? candidate.data.map((item) => toSafeNumber(item))
+      : [];
+
+    if (labels.length > 0 && labels.length === data.length) {
+      return { labels, data };
+    }
+  }
+
+  if (Array.isArray(value)) {
+    const points = value
+      .map((item) => {
+        if (!item || typeof item !== 'object') return null;
+        const map = item as Record<string, unknown>;
+        const label = String(map.month ?? map.label ?? '');
+        if (!label) return null;
+        return {
+          label,
+          value: toSafeNumber(map.value ?? map.count ?? map.total),
+        };
+      })
+      .filter((item): item is { label: string; value: number } => Boolean(item));
+
+    if (points.length > 0) {
+      return {
+        labels: points.map((point) => point.label),
+        data: points.map((point) => point.value),
+      };
+    }
+  }
+
+  return {
+    labels: DEFAULT_MONTH_LABELS,
+    data: DEFAULT_MONTH_LABELS.map(() => 0),
+  };
+};
+
+const decodeJwtRole = (token: string | null): string => {
+  if (!token) return '';
+
+  try {
+    const payloadPart = token.split('.')[1];
+    if (!payloadPart) return '';
+
+    const normalized = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+    const payload = JSON.parse(atob(padded));
+    return payload?.role ?? '';
+  } catch {
+    return '';
+  }
 };
 
 const normalizeDashboardData = (payload: DashboardPayload | null | undefined): DashboardData => {
@@ -215,6 +278,7 @@ const normalizeDashboardData = (payload: DashboardPayload | null | undefined): D
       admin: toSafeNumber(userSource.admin),
       user: toSafeNumber(userSource.user),
     },
+    monthlyGrowth: normalizeMonthlyGrowth(source.monthlyGrowth),
     recentActivities: Array.isArray(source.recentActivities) ? source.recentActivities : [],
   };
 };
@@ -229,10 +293,7 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchUserData = () => {
       const token = localStorage.getItem('token');
-      if (token) {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        setUserRole(payload.role);
-      }
+      setUserRole(decodeJwtRole(token));
     };
     fetchUserData();
   }, []);
@@ -249,11 +310,41 @@ const Dashboard = () => {
       setData(normalizeDashboardData(response.data));
       setError('');
     } catch (error: any) {
-      console.error('Error fetching dashboard data:', error);
-      if (error.response?.status === 401) {
-        setError('Session expirée, veuillez vous reconnecter.');
-      } else {
-        setError('Erreur lors du chargement des données du tableau de bord');
+      try {
+        const fallbackResponse = await axiosInstance.get(`${API_ENDPOINTS.TREES_LIST}/stats`);
+        const fallbackStats = fallbackResponse.data ?? {};
+        const totalUsers = toSafeNumber(fallbackStats?.platformStats?.totalUsers);
+        const totalAdmins = toSafeNumber(fallbackStats?.platformStats?.totalAdmins);
+
+        setData(
+          normalizeDashboardData({
+            trees: {
+              total: toSafeNumber(fallbackStats.totalTrees),
+              healthy: toSafeNumber(fallbackStats.healthyTrees),
+              warning: toSafeNumber(fallbackStats.warningTrees),
+              critical: toSafeNumber(fallbackStats.criticalTrees),
+              archived: toSafeNumber(fallbackStats.archivedTrees),
+              complete: toSafeNumber(fallbackStats?.platformStats?.completeDataTrees),
+              incomplete: toSafeNumber(fallbackStats?.platformStats?.incompleteDataTrees),
+            },
+            users: {
+              total: totalUsers,
+              admin: totalAdmins,
+              user: Math.max(0, totalUsers - totalAdmins),
+            },
+            monthlyGrowth: fallbackStats.monthlyGrowth,
+            recentActivities: [],
+          })
+        );
+        setError('');
+      } catch (fallbackError: any) {
+        console.error('Error fetching dashboard data:', error);
+        console.error('Error fetching fallback dashboard stats:', fallbackError);
+        if (error.response?.status === 401 || fallbackError.response?.status === 401) {
+          setError('Session expirée, veuillez vous reconnecter.');
+        } else {
+          setError('Erreur lors du chargement des données du tableau de bord');
+        }
       }
     } finally {
       setLoading(false);
@@ -331,11 +422,11 @@ const Dashboard = () => {
   };
 
   const lineChartData = {
-    labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun'],
+    labels: data.monthlyGrowth.labels,
     datasets: [
       {
         label: 'Arbres ajoutés',
-        data: [12, 19, 15, 25, 22, 30],
+        data: data.monthlyGrowth.data,
         borderColor: theme.palette.primary.main,
         backgroundColor: alpha(theme.palette.primary.main, 0.2),
         borderWidth: 3,

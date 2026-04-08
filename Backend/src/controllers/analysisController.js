@@ -123,6 +123,10 @@ const createAnalysisWithGPSAndAI = async (req, res) => {
       notes
     } = req.body;
 
+    if (typeof treeType === 'string') {
+      treeType = treeType.trim();
+    }
+
     // Parse gpsData if it's a string
     if (typeof gpsData === 'string') {
       try {
@@ -134,7 +138,27 @@ const createAnalysisWithGPSAndAI = async (req, res) => {
       }
     }
 
-    if (!treeType || !gpsData || !gpsData.latitude || !gpsData.longitude) {
+    // Parse measurements when sent as multipart field
+    if (typeof measurements === 'string') {
+      try {
+        measurements = JSON.parse(measurements);
+      } catch (e) {
+        measurements = {};
+      }
+    }
+
+    if (!measurements || typeof measurements !== 'object') {
+      measurements = {};
+    }
+
+    if (
+      !treeType ||
+      !gpsData ||
+      gpsData.latitude === undefined ||
+      gpsData.latitude === null ||
+      gpsData.longitude === undefined ||
+      gpsData.longitude === null
+    ) {
       return res.status(400).json({ 
         message: 'Type d\'arbre et coordonnées GPS sont requis' 
       });
@@ -334,7 +358,7 @@ const createAnalysisWithGPSAndAI = async (req, res) => {
 // Create analysis with GPS-based tree matching (legacy, sans AI)
 const createAnalysisWithGPSMatching = async (req, res) => {
   try {
-    const {
+    let {
       treeType,
       gpsData,
       images,
@@ -344,7 +368,30 @@ const createAnalysisWithGPSMatching = async (req, res) => {
       notes
     } = req.body;
 
-    if (!treeType || !gpsData || !gpsData.latitude || !gpsData.longitude) {
+    if (typeof gpsData === 'string') {
+      try {
+        gpsData = JSON.parse(gpsData);
+      } catch (e) {
+        return res.status(400).json({ message: 'Format GPS invalide' });
+      }
+    }
+
+    if (typeof measurements === 'string') {
+      try {
+        measurements = JSON.parse(measurements);
+      } catch (e) {
+        measurements = {};
+      }
+    }
+
+    if (
+      !treeType ||
+      !gpsData ||
+      gpsData.latitude === undefined ||
+      gpsData.latitude === null ||
+      gpsData.longitude === undefined ||
+      gpsData.longitude === null
+    ) {
       return res.status(400).json({ 
         message: 'Type d\'arbre et coordonnées GPS sont requis' 
       });

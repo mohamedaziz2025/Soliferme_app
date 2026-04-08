@@ -486,8 +486,20 @@ class MyApp extends StatelessWidget {
               builder: (context) => TreeDetailsScreen(treeId: treeId),
             );
           case '/tree-analysis':
+            final args = settings.arguments;
+            final Map<String, dynamic> payload =
+                args is Map ? Map<String, dynamic>.from(args) : <String, dynamic>{};
+
             return MaterialPageRoute(
-              builder: (context) => const TreeAnalysisScreen(),
+              builder: (context) => TreeAnalysisScreen(
+                initialTreeId: payload['treeId']?.toString(),
+                arMeasuredHeight: payload['arMeasuredHeight'] is num
+                    ? (payload['arMeasuredHeight'] as num).toDouble()
+                    : null,
+                initialAnalysisResult: payload['initialAnalysisResult'] is Map<String, dynamic>
+                    ? Map<String, dynamic>.from(payload['initialAnalysisResult'])
+                    : null,
+              ),
             );
         }
         return null;

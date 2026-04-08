@@ -1,7 +1,6 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
 import './auth_service.dart';
 import './sync_service.dart';
@@ -14,7 +13,13 @@ class ApiService {
   ApiService._internal();
 
   // Use hosted backend URL
-  static String get baseUrl => AppConfig.apiBaseUrl;
+  static String get baseUrl {
+    final normalized = AppConfig.apiBaseUrl.trim().replaceAll(RegExp(r'/+$'), '');
+    if (normalized.endsWith('/api/api')) {
+      return normalized.substring(0, normalized.length - 4);
+    }
+    return normalized;
+  }
 
   final SyncService _syncService = SyncService();
   final NetworkService _networkService = NetworkService();
@@ -23,7 +28,7 @@ class ApiService {
     final authService = AuthService();
     final token = await authService.getToken();
     
-    if (token == null) {
+    if (token == null || token.isEmpty) {
       throw ApiException('No authentication token found', 401);
     }
 
@@ -265,6 +270,92 @@ class ApiService {
       } else {
         throw ApiException('Failed to create analysis: ${response.statusCode}', response.statusCode);
       }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Network error: $e', 500);
+    }
+  }
+
+  Future<Map<String, dynamic>> createAnalysisWithAI({
+    required File imageFile,
+    required String treeType,
+    required Map<String, dynamic> gpsData,
+    Map<String, dynamic>? measurements,
+    String? notes,
+  }) async {
+    if (!await _networkService.isOnline()) {
+      throw ApiException('No network connection', 503);
+    }
+
+    Future<http.StreamedResponse> sendRequest() async {
+      final headers = await getHeaders();
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/analysis/create-with-ai'),
+      );
+
+      final authHeader = headers['Authorization'];
+      if (authHeader != null && authHeader.isNotEmpty) {
+        request.headers['Authorization'] = authHeader;
+      }
+
+      request.fields['treeType'] = treeType;
+      request.fields['gpsData'] = json.encode(gpsData);
+
+      if (measurements != null && measurements.isNotEmpty) {
+        request.fields['measurements'] = json.encode(measurements);
+      }
+
+      if (notes != null && notes.trim().isNotEmpty) {
+        request.fields['notes'] = notes.trim();
+      }
+
+      request.files.add(await http.MultipartFile.fromPath('image', imageFile.path));
+
+      return request.send();
+    }
+
+    Future<Map<String, dynamic>> parseResponse(http.StreamedResponse response) async {
+      final responseBody = await response.stream.bytesToString();
+      dynamic decoded;
+
+      if (responseBody.isNotEmpty) {
+        try {
+          decoded = json.decode(responseBody);
+        } catch (_) {
+          decoded = null;
+        }
+      }
+
+      if (response.statusCode == 201) {
+        if (decoded is Map<String, dynamic>) {
+          return decoded;
+        }
+        return {
+          'success': true,
+          'message': 'Analyse IA creee avec succes',
+        };
+      }
+
+      String? details;
+      if (decoded is Map<String, dynamic>) {
+        details = decoded['message']?.toString() ?? decoded['error']?.toString();
+      } else if (responseBody.isNotEmpty) {
+        details = responseBody;
+      }
+
+      throw ApiException.fromStatusCode(response.statusCode, details: details);
+    }
+
+    try {
+      final response = await sendRequest();
+      return await parseResponse(response);
+    } on ApiException catch (e) {
+      if (e.statusCode != 401) rethrow;
+
+      await refreshToken();
+      final retryResponse = await sendRequest();
+      return await parseResponse(retryResponse);
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Network error: $e', 500);

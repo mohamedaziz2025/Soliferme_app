@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:crypto/crypto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
 import './api_exception.dart';
@@ -17,7 +16,6 @@ class AuthService extends ChangeNotifier {
   Map<String, dynamic>? _userData;
   bool _isAdmin = false;
   final SecureStorageService _secureStorage = SecureStorageService();
-  DateTime? _tokenExpiry;
 
   String? get token => _token;
   Map<String, dynamic>? get userData => _userData;
@@ -59,10 +57,26 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<String?> getToken() async {
-    if (_token == null) {
-      final prefs = await SharedPreferences.getInstance();
-      _token = prefs.getString(tokenKey);
+    if (_token != null && _token!.isNotEmpty) {
+      return _token;
     }
+
+    try {
+      _token = await _secureStorage.getAuthToken();
+      if (_token != null && _token!.isNotEmpty) {
+        return _token;
+      }
+    } catch (_) {
+      // Fallback to shared preferences if secure storage read fails.
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    _token = prefs.getString(tokenKey);
+
+    if (_token != null && _token!.isNotEmpty) {
+      await _secureStorage.saveAuthToken(_token!);
+    }
+
     return _token;
   }
 
@@ -82,9 +96,11 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<bool> isAuthenticated() async {
-    if (_token == null) {
+    final token = await getToken();
+    if (token == null || token.isEmpty) return false;
+
+    if (_userData == null) {
       final prefs = await SharedPreferences.getInstance();
-      _token = prefs.getString(tokenKey);
       final userDataStr = prefs.getString(userKey);
       if (userDataStr != null) {
         _userData = json.decode(userDataStr);
@@ -92,13 +108,11 @@ class AuthService extends ChangeNotifier {
       }
     }
 
-    if (_token == null) return false;
-
     try {
       final response = await http.get(
         Uri.parse('$baseUrl/auth/profile'),
         headers: {
-          'Authorization': 'Bearer $_token',
+          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
       );
@@ -137,6 +151,7 @@ class AuthService extends ChangeNotifier {
         // Save to secure storage and prefs
         await _secureStorage.saveAuthToken(_token!);
         final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(tokenKey, _token!);
         await prefs.setString(userKey, json.encode(_userData));
 
         notifyListeners();
@@ -160,6 +175,7 @@ class AuthService extends ChangeNotifier {
 
     await _secureStorage.removeAuthToken();
     final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(tokenKey);
     await prefs.remove(userKey);
 
     notifyListeners();
@@ -186,6 +202,7 @@ class AuthService extends ChangeNotifier {
         
         await _secureStorage.saveAuthToken(_token!);
         final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(tokenKey, _token!);
         await prefs.setString(userKey, json.encode(_userData));
         
         notifyListeners();
@@ -292,6 +309,7 @@ class AuthService extends ChangeNotifier {
         _isAdmin = _userData?['role'] == 'admin';
 
         final prefs = await SharedPreferences.getInstance();
+        await _secureStorage.saveAuthToken(_token!);
         await prefs.setString(tokenKey, _token!);
         await prefs.setString(userKey, json.encode(_userData));
 

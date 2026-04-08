@@ -4,11 +4,22 @@ import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
 import '../services/api_service.dart';
-import '../services/auth_service.dart';
 import '../services/permission_service.dart';
+import '../services/tree_service.dart';
 
 class TreeAnalysisScreen extends StatefulWidget {
-  const TreeAnalysisScreen({Key? key}) : super(key: key);
+  final String? initialTreeId;
+  final double? arMeasuredHeight;
+  final Map<String, dynamic>? initialAnalysisResult;
+  final bool autoStartCamera;
+
+  const TreeAnalysisScreen({
+    Key? key,
+    this.initialTreeId,
+    this.arMeasuredHeight,
+    this.initialAnalysisResult,
+    this.autoStartCamera = false,
+  }) : super(key: key);
 
   @override
   State<TreeAnalysisScreen> createState() => _TreeAnalysisScreenState();
@@ -23,8 +34,7 @@ class _TreeAnalysisScreenState extends State<TreeAnalysisScreen> {
   Position? _currentPosition;
   bool _isAnalyzing = false;
   bool _isLoadingGPS = false;
-  
-  Map<String, dynamic>? _analysisResult;
+  bool _cameraAutoStarted = false;
   
   final ImagePicker _picker = ImagePicker();
   
@@ -42,10 +52,81 @@ class _TreeAnalysisScreenState extends State<TreeAnalysisScreen> {
     'Autre'
   ];
 
+  double? _toDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString());
+  }
+
+  Map<String, dynamic> _extractAnalysisPayload(Map<String, dynamic> result) {
+    final analysis = result['analysis'];
+    if (analysis is Map<String, dynamic>) {
+      return analysis;
+    }
+
+    final aiAnalysis = result['aiAnalysis'];
+    if (aiAnalysis is Map<String, dynamic>) {
+      return {
+        'diseaseDetection': aiAnalysis['diseaseDetection'],
+        'treeAnalysis': aiAnalysis['treeAnalysis'],
+      };
+    }
+
+    return const {};
+  }
+
+  Map<String, dynamic> _extractDiseaseDetection(Map<String, dynamic> result) {
+    final analysis = _extractAnalysisPayload(result);
+    final disease = analysis['diseaseDetection'];
+    if (disease is Map<String, dynamic>) {
+      return disease;
+    }
+    return const {};
+  }
+
   @override
   void initState() {
     super.initState();
-    _getCurrentLocation();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _hydrateInitialContext();
+      await _getCurrentLocation();
+
+      if (!mounted) return;
+
+      if (mounted && widget.initialAnalysisResult != null) {
+        _showAnalysisResults(widget.initialAnalysisResult!);
+      } else if (widget.autoStartCamera && !_cameraAutoStarted) {
+        _cameraAutoStarted = true;
+        await _capturePhoto();
+      }
+    });
+  }
+
+  Future<void> _hydrateInitialContext() async {
+    if (widget.arMeasuredHeight != null && _notesController.text.isEmpty) {
+      _notesController.text =
+          'Mesure AR sauvegardee: ${widget.arMeasuredHeight!.toStringAsFixed(2)} m';
+    }
+
+    final treeId = widget.initialTreeId;
+    if (treeId == null || treeId.isEmpty) return;
+
+    try {
+      final treeService = Provider.of<TreeService>(context, listen: false);
+      final tree = await treeService.getTreeById(treeId);
+      final treeType = tree['treeType']?.toString().trim();
+
+      if (!mounted) return;
+
+      if (treeType != null && treeType.isNotEmpty && _treeTypeController.text.isEmpty) {
+        setState(() {
+          _treeTypeController.text = treeType;
+        });
+      }
+    } catch (_) {
+      // Non-blocking hydration: user can still run analysis manually.
+    }
   }
 
   Future<void> _getCurrentLocation() async {
@@ -169,6 +250,10 @@ class _TreeAnalysisScreenState extends State<TreeAnalysisScreen> {
     }
 
     if (_currentPosition == null) {
+      await _getCurrentLocation();
+    }
+
+    if (_currentPosition == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('GPS non disponible. Veuillez attendre...'),
@@ -184,62 +269,23 @@ class _TreeAnalysisScreenState extends State<TreeAnalysisScreen> {
 
     try {
       final apiService = Provider.of<ApiService>(context, listen: false);
-      
-      // TODO: Call AI analysis service here
-      // For now, simulate AI analysis
-      await Future.delayed(const Duration(seconds: 2));
-      
-      // Mock AI results
-      final mockDiseaseDetection = {
-        'detected': true,
-        'diseases': [
-          {
-            'name': 'Mildiou',
-            'confidence': 87.5,
-            'severity': 'medium',
-            'affectedArea': 'Feuilles',
-            'recommendations': [
-              'Traiter avec un fongicide approprié',
-              'Améliorer la circulation d\'air',
-              'Éviter l\'arrosage des feuilles'
-            ]
-          }
-        ],
-        'overallHealthScore': 72
+
+      final measurements = <String, dynamic>{
+        if (widget.arMeasuredHeight != null) 'height': widget.arMeasuredHeight,
       };
 
-      final mockTreeAnalysis = {
-        'species': _treeTypeController.text,
-        'estimatedAge': 8,
-        'foliageDensity': 75,
-        'structuralIntegrity': 85,
-        'growthIndicators': {
-          'newGrowth': true,
-          'leafColor': 'Vert foncé',
-          'branchHealth': 'Bonne'
-        }
-      };
-
-      // Send to backend API
-      final analysisData = {
-        'treeType': _treeTypeController.text,
-        'gpsData': {
+      final result = await apiService.createAnalysisWithAI(
+        imageFile: _capturedImage!,
+        treeType: _treeTypeController.text,
+        gpsData: {
           'latitude': _currentPosition!.latitude,
           'longitude': _currentPosition!.longitude,
           'accuracy': _currentPosition!.accuracy,
           'altitude': _currentPosition!.altitude,
         },
-        'diseaseDetection': mockDiseaseDetection,
-        'treeAnalysis': mockTreeAnalysis,
-        'notes': _notesController.text,
-        'images': [], // TODO: Upload image to server and get URL
-      };
-
-      final result = await apiService.createAnalysisWithGPS(analysisData);
-
-      setState(() {
-        _analysisResult = result;
-      });
+        measurements: measurements,
+        notes: _notesController.text,
+      );
 
       if (mounted) {
         _showAnalysisResults(result);
@@ -393,8 +439,8 @@ class _TreeAnalysisScreenState extends State<TreeAnalysisScreen> {
     Color color, 
     Map<String, dynamic> result
   ) {
-    final analysis = result['analysis'] as Map<String, dynamic>?;
-    final healthScore = analysis?['diseaseDetection']?['overallHealthScore'] ?? 0;
+    final diseaseDetection = _extractDiseaseDetection(result);
+    final healthScore = (_toDouble(diseaseDetection['overallHealthScore']) ?? 0).round();
     
     return Container(
       padding: const EdgeInsets.all(16),
@@ -444,8 +490,9 @@ class _TreeAnalysisScreenState extends State<TreeAnalysisScreen> {
   }
 
   Widget _buildDiseaseSection(Map<String, dynamic> result) {
-    final analysis = result['analysis'] as Map<String, dynamic>?;
-    final diseases = analysis?['diseaseDetection']?['diseases'] as List? ?? [];
+    final diseaseDetection = _extractDiseaseDetection(result);
+    final dynamic diseasesRaw = diseaseDetection['diseases'];
+    final List<dynamic> diseases = diseasesRaw is List ? diseasesRaw : [];
     
     if (diseases.isEmpty) {
       return Container(
@@ -483,7 +530,9 @@ class _TreeAnalysisScreenState extends State<TreeAnalysisScreen> {
           ),
         ),
         const SizedBox(height: 10),
-        ...diseases.map((disease) => _buildDiseaseCard(disease)),
+        ...diseases
+            .whereType<Map>()
+            .map((disease) => _buildDiseaseCard(Map<String, dynamic>.from(disease))),
       ],
     );
   }
@@ -494,6 +543,7 @@ class _TreeAnalysisScreenState extends State<TreeAnalysisScreen> {
                           severity == 'high' ? Colors.orange :
                           severity == 'medium' ? Colors.yellow :
                           Colors.blue;
+    final confidence = _toDouble(disease['confidence']) ?? 0;
     
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -526,7 +576,7 @@ class _TreeAnalysisScreenState extends State<TreeAnalysisScreen> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  '${disease['confidence']?.toStringAsFixed(1) ?? '0'}%',
+                  '${confidence.toStringAsFixed(1)}%',
                   style: TextStyle(
                     color: severityColor,
                     fontSize: 12,
@@ -582,7 +632,14 @@ class _TreeAnalysisScreenState extends State<TreeAnalysisScreen> {
   }
 
   Widget _buildTreeInfoSection(Map<String, dynamic> result) {
-    final tree = result['tree'] as Map<String, dynamic>?;
+    final treeRaw = result['tree'];
+    final tree = treeRaw is Map<String, dynamic>
+      ? treeRaw
+      : (treeRaw is Map ? Map<String, dynamic>.from(treeRaw) : null);
+    final locationRaw = tree?['location'];
+    final location = locationRaw is Map<String, dynamic>
+      ? locationRaw
+      : (locationRaw is Map ? Map<String, dynamic>.from(locationRaw) : null);
     
     return Container(
       padding: const EdgeInsets.all(16),
@@ -603,20 +660,20 @@ class _TreeAnalysisScreenState extends State<TreeAnalysisScreen> {
             ),
           ),
           const SizedBox(height: 15),
-          _buildInfoRow('ID', tree?['treeId'] ?? 'N/A'),
+          _buildInfoRow('ID', tree?['treeId'] ?? tree?['_id'] ?? 'N/A'),
           _buildInfoRow('Type', tree?['treeType'] ?? 'N/A'),
           _buildInfoRow('Statut', tree?['status'] ?? 'N/A'),
           _buildInfoRow(
             'GPS', 
-            '${tree?['location']?['latitude']?.toStringAsFixed(6) ?? 'N/A'}, '
-            '${tree?['location']?['longitude']?.toStringAsFixed(6) ?? 'N/A'}'
+            '${(_toDouble(location?['latitude'])?.toStringAsFixed(6) ?? 'N/A')}, '
+            '${(_toDouble(location?['longitude'])?.toStringAsFixed(6) ?? 'N/A')}'
           ),
         ],
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(String label, dynamic value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -630,7 +687,7 @@ class _TreeAnalysisScreenState extends State<TreeAnalysisScreen> {
             ),
           ),
           Text(
-            value,
+            value?.toString() ?? 'N/A',
             style: const TextStyle(
               color: Colors.white,
               fontSize: 14,
@@ -645,7 +702,6 @@ class _TreeAnalysisScreenState extends State<TreeAnalysisScreen> {
   void _resetForm() {
     setState(() {
       _capturedImage = null;
-      _analysisResult = null;
       _notesController.clear();
     });
   }

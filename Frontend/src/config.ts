@@ -1,5 +1,19 @@
 // Configuration de l'API
-export const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://72.62.71.97:35000';
+const inferApiBaseUrl = (): string => {
+  const configuredUrl = process.env.REACT_APP_API_URL?.trim();
+  if (configuredUrl) {
+    return configuredUrl;
+  }
+
+  if (typeof window !== 'undefined' && window.location?.hostname) {
+    const { protocol, hostname } = window.location;
+    return `${protocol}//${hostname}:35000`;
+  }
+
+  return 'http://localhost:35000';
+};
+
+export const API_BASE_URL = inferApiBaseUrl();
 
 export const API_ENDPOINTS = {
   // Auth

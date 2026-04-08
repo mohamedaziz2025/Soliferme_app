@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:ar_flutter_plugin/ar_flutter_plugin.dart';
-import 'package:vector_math/vector_math_64.dart' as vector_math;
 import 'package:provider/provider.dart';
 import '../services/tree_service.dart';
+import 'tree_analysis_screen.dart';
 
 /// Screen allowing the user to tap two points on a plane and record the
 /// distance between them. Results can be saved to the current tree record.
@@ -25,6 +25,14 @@ class _ARMeasurementScreenState extends State<ARMeasurementScreen> {
   ARPlaneAnchor? _secondAnchor;
   double? _lastDistance;
   bool _saving = false;
+
+  double? _toDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString());
+  }
 
   @override
   void dispose() {
@@ -60,12 +68,12 @@ class _ARMeasurementScreenState extends State<ARMeasurementScreen> {
     if (_firstAnchor == null) {
       await _arAnchorManager.addAnchor(anchor);
       setState(() {
-        _firstAnchor = anchor as ARPlaneAnchor;
+        _firstAnchor = anchor;
       });
     } else if (_secondAnchor == null) {
       await _arAnchorManager.addAnchor(anchor);
       setState(() {
-        _secondAnchor = anchor as ARPlaneAnchor;
+        _secondAnchor = anchor;
       });
       final dist = await _arSessionManager.getDistanceBetweenAnchors(
           _firstAnchor!, _secondAnchor!);
@@ -94,15 +102,39 @@ class _ARMeasurementScreenState extends State<ARMeasurementScreen> {
     setState(() {
       _saving = true;
     });
+
     try {
       final treeService = Provider.of<TreeService>(context, listen: false);
+      final existingTree = await treeService.getTreeById(widget.treeId);
+      final existingMeasurements = existingTree['measurements'] is Map
+          ? Map<String, dynamic>.from(existingTree['measurements'])
+          : <String, dynamic>{};
+
       await treeService.updateTree(widget.treeId, {
         'measurements': {
           'height': _lastDistance,
-          // width is not computed here, client may re‑run and swap orientation
+          'width': _toDouble(existingMeasurements['width']) ?? 0,
+          'approximateShape':
+              existingMeasurements['approximateShape']?.toString() ?? '',
         }
       });
-      if (mounted) Navigator.pop(context, _lastDistance);
+
+      if (!mounted) return;
+
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => TreeAnalysisScreen(
+            initialTreeId: widget.treeId,
+            arMeasuredHeight: _lastDistance,
+            autoStartCamera: true,
+          ),
+        ),
+      );
+
+      if (mounted) {
+        Navigator.pop(context, _lastDistance);
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('Erreur lors de la sauvegarde : $e'),

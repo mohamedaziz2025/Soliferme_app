@@ -5,7 +5,26 @@
  */
 
 // Configuration de base
-export const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+const normalizeApiBaseUrl = (url: string): string => {
+  const trimmed = url.trim().replace(/\/+$/, '');
+  return trimmed.endsWith('/api') ? trimmed.slice(0, -4) : trimmed;
+};
+
+const inferApiBaseUrl = (): string => {
+  const configuredUrl = process.env.REACT_APP_API_URL?.trim();
+  if (configuredUrl) {
+    return normalizeApiBaseUrl(configuredUrl);
+  }
+
+  if (typeof window !== 'undefined' && window.location?.hostname) {
+    const { protocol, hostname } = window.location;
+    return normalizeApiBaseUrl(`${protocol}//${hostname}:35000`);
+  }
+
+  return normalizeApiBaseUrl('http://localhost:35000');
+};
+
+export const API_BASE_URL = inferApiBaseUrl();
 
 // Services internes
 export const BACKEND_API = {

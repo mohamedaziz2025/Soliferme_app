@@ -25,11 +25,11 @@ router.get('/history', auth, getAnalysisHistory);
 // Get all analyses
 router.get('/', auth, getAllAnalyses);
 
-// Get analysis by ID
-router.get('/:id', auth, getAnalysisById);
-
 // Get analyses for a specific tree
 router.get('/tree/:treeId', auth, getAnalysesByTreeId);
+
+// Get analysis by ID
+router.get('/:id', auth, getAnalysisById);
 
 // Update analysis
 router.put('/:id', auth, updateAnalysis);
