@@ -431,7 +431,7 @@ class _DashboardTabState extends State<DashboardTab> {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 Container(
-                  height: height.clamp(10, 150),
+                  height: height.clamp(10.0, 150.0).toDouble(),
                   width: 40,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(

@@ -11,6 +11,7 @@ const importRoutes = require('./routes/import');
 const syncRoutes = require('./routes/sync');
 const winston = require('winston');
 const { initProducer, disconnectProducer } = require('./services/eventBus');
+const { startAlertConsumer, stopAlertConsumer } = require('./services/alertConsumer');
 
 // Configuration du logger
 const logger = winston.createLogger({
@@ -230,14 +231,17 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT} and accessible from all network interfaces`);
   initProducer();
+  startAlertConsumer();
 });
 
 process.on('SIGINT', async () => {
+  await stopAlertConsumer();
   await disconnectProducer();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
+  await stopAlertConsumer();
   await disconnectProducer();
   process.exit(0);
 });

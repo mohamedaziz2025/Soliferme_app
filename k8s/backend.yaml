@@ -40,6 +40,24 @@ spec:
                 secretKeyRef:
                   name: soliferme-secrets
                   key: AI_SERVICE_URL
+            - name: SMTP_USER
+              valueFrom:
+                secretKeyRef:
+                  name: soliferme-secrets
+                  key: SMTP_USER
+                  optional: true
+            - name: SMTP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: soliferme-secrets
+                  key: SMTP_PASSWORD
+                  optional: true
+            - name: ALERT_WEBHOOK_AUTH_HEADER
+              valueFrom:
+                secretKeyRef:
+                  name: soliferme-secrets
+                  key: ALERT_WEBHOOK_AUTH_HEADER
+                  optional: true
           readinessProbe:
             httpGet:
               path: /health
