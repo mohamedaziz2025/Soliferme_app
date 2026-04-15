@@ -36,6 +36,7 @@ const webhookEnabled = process.env.ALERT_WEBHOOK_ENABLED === 'true';
 const webhookUrl = process.env.ALERT_WEBHOOK_URL || '';
 const webhookAuthHeader = process.env.ALERT_WEBHOOK_AUTH_HEADER || '';
 const webhookTimeoutMs = Number(process.env.ALERT_WEBHOOK_TIMEOUT_MS || 5000);
+const startupRetryDelayMs = Number(process.env.ALERT_CONSUMER_RETRY_MS || 10000);
 
 const levelWeight = {
   info: 1,
@@ -46,6 +47,7 @@ const levelWeight = {
 let consumer = null;
 let isRunning = false;
 let emailTransporter = null;
+let startupRetryTimer = null;
 const lastSentByKey = new Map();
 
 function topic(name) {
@@ -364,6 +366,11 @@ async function startAlertConsumer() {
     return;
   }
 
+  if (startupRetryTimer) {
+    clearTimeout(startupRetryTimer);
+    startupRetryTimer = null;
+  }
+
   if (isRunning) {
     return;
   }
@@ -398,10 +405,23 @@ async function startAlertConsumer() {
     console.error('Alert consumer startup failed:', error.message);
     isRunning = false;
     consumer = null;
+
+    // Kafka can be reachable a few seconds after backend startup.
+    startupRetryTimer = setTimeout(() => {
+      startupRetryTimer = null;
+      startAlertConsumer().catch((retryError) => {
+        console.error('Alert consumer retry failed:', retryError.message);
+      });
+    }, startupRetryDelayMs);
   }
 }
 
 async function stopAlertConsumer() {
+  if (startupRetryTimer) {
+    clearTimeout(startupRetryTimer);
+    startupRetryTimer = null;
+  }
+
   if (!consumer) {
     return;
   }

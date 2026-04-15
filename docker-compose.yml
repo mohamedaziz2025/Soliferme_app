@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Zookeeper (Kafka dependency)
   zookeeper:
@@ -25,7 +23,7 @@ services:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:${KAFKA_PORT_EXTERNAL:-9092}
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://${SERVER_HOST:-72.62.71.97}:${KAFKA_PORT_EXTERNAL:-9092}
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
@@ -35,6 +33,12 @@ services:
       - kafka_data:/var/lib/kafka/data
     networks:
       - soliferme-network
+    healthcheck:
+      test: ["CMD-SHELL", "cub kafka-ready -b localhost:9092 1 30"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
 
   # MongoDB Database
   mongodb:
@@ -98,9 +102,9 @@ services:
       - MONGODB_URI=mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-soliferme2026}@mongodb:27017/${MONGO_DATABASE:-soliferme}?authSource=admin
       - JWT_SECRET=${JWT_SECRET:-votre_secret_jwt_super_securise_2026}
       - AI_SERVICE_URL=http://ai-service:${AI_SERVICE_PORT:-5001}
-      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://${SERVER_HOST:-72.62.71.97}:${FRONTEND_PORT_EXTERNAL:-38000}}
       - KAFKA_ENABLED=${KAFKA_ENABLED:-true}
-      - KAFKA_BROKERS=${KAFKA_BROKERS:-kafka:9092}
+      - KAFKA_BROKERS=kafka:9092
       - KAFKA_CLIENT_ID=${KAFKA_CLIENT_ID:-fruitytrack-backend}
       - KAFKA_TOPIC_PREFIX=${KAFKA_TOPIC_PREFIX:-fruitytrack}
       - ALERT_CONSUMER_ENABLED=${ALERT_CONSUMER_ENABLED:-true}
@@ -132,7 +136,7 @@ services:
       ai-service:
         condition: service_healthy
       kafka:
-        condition: service_started
+        condition: service_healthy
     networks:
       - soliferme-network
     healthcheck:
@@ -150,7 +154,7 @@ services:
     container_name: soliferme-frontend
     restart: unless-stopped
     environment:
-      - REACT_APP_API_URL=${REACT_APP_API_URL:-http://localhost:${BACKEND_PORT_EXTERNAL:-35000}}
+      - REACT_APP_API_URL=${REACT_APP_API_URL:-http://${SERVER_HOST:-72.62.71.97}:${BACKEND_PORT_EXTERNAL:-35000}}
     ports:
       - "${FRONTEND_PORT_EXTERNAL:-38000}:80"
     depends_on:

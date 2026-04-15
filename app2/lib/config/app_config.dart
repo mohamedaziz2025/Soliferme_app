@@ -1,14 +1,14 @@
 class AppConfig {
   // URL configurable via --dart-define=BACKEND_URL / AI_SERVICE_URL
-  // Defaults are local-friendly for Android emulator + local Docker.
+  // Defaults target the deployed server when no --dart-define is provided.
   static const String backendUrl = String.fromEnvironment(
     'BACKEND_URL',
-    defaultValue: 'http://10.0.2.2:35000',
+    defaultValue: 'http://72.62.71.97:35000',
   );
 
   static const String aiServiceUrl = String.fromEnvironment(
     'AI_SERVICE_URL',
-    defaultValue: 'http://10.0.2.2:5001',
+    defaultValue: 'http://72.62.71.97:5001',
   );
 
   static String get normalizedBackendUrl {
