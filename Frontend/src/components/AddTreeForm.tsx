@@ -9,6 +9,7 @@ import {
   Alert,
 } from '@mui/material';
 import axios from 'axios';
+import { API_ENDPOINTS } from '../config/apiConfig';
 
 interface AddTreeFormProps {
   onTreeAdded: () => void;
@@ -76,7 +77,7 @@ const AddTreeForm: React.FC<AddTreeFormProps> = ({ onTreeAdded }) => {
     try {
       const token = localStorage.getItem('token');
       await axios.post(
-        'http://72.62.71.97:35000/api/trees',
+        API_ENDPOINTS.TREES_LIST,
         {
           ...formData,
           location: {
@@ -230,3 +231,6 @@ const AddTreeForm: React.FC<AddTreeFormProps> = ({ onTreeAdded }) => {
 };
 
 export default AddTreeForm;
+
+
+

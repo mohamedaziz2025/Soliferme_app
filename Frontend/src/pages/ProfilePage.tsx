@@ -40,6 +40,7 @@ import {
 } from '@mui/icons-material';
 import axios from 'axios';
 import { validation, validateFormField } from '../utils/validation';
+import { API_ENDPOINTS } from '../config/apiConfig';
 
 interface UserProfile {
   _id: string;
@@ -203,7 +204,7 @@ const ProfilePage = () => {
         return;
       }
 
-      const response = await axios.get('http://72.62.71.97:35000/api/auth/profile', {
+      const response = await axios.get(API_ENDPOINTS.PROFILE, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setProfile(response.data);
@@ -281,7 +282,7 @@ const ProfilePage = () => {
       };
 
       await axios.put(
-        'http://72.62.71.97:35000/api/auth/profile',
+        API_ENDPOINTS.PROFILE,
         updateData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -786,3 +787,6 @@ const ProfilePage = () => {
 };
 
 export default ProfilePage;
+
+
+

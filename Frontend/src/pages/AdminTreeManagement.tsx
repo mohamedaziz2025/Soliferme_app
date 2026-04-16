@@ -45,8 +45,9 @@ import {
   Spa as SpaIcon,
 } from '@mui/icons-material';
 import axios from 'axios';
+import { API_ENDPOINTS, BACKEND_API } from '../config/apiConfig';
 
-const API_URL = 'http://72.62.71.97:35000/api';
+const API_URL = BACKEND_API.TREES;
 
 interface Tree {
   _id: string;
@@ -566,3 +567,5 @@ const AdminTreeManagement: React.FC = () => {
 };
 
 export default AdminTreeManagement;
+
+

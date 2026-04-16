@@ -60,3 +60,4 @@ const MapLegend: React.FC = () => {
 };
 
 export default MapLegend;
+

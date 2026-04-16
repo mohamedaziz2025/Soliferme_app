@@ -36,6 +36,7 @@ import {
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { API_ENDPOINTS } from '../config/apiConfig';
 
 interface Disease {
   name: string;
@@ -114,7 +115,7 @@ const AnalysisHistoryPage: React.FC = () => {
       if (severity) queryParams.append('severity', severity);
 
       const response = await fetch(
-        `http://72.62.71.97:35000/api/analysis/history?${queryParams.toString()}`,
+        API_ENDPOINTS.ANALYSIS_DETAIL/history?${queryParams.toString()}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -578,3 +579,6 @@ const AnalysisHistoryPage: React.FC = () => {
 };
 
 export default AnalysisHistoryPage;
+
+
+

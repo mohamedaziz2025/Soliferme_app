@@ -20,6 +20,7 @@ import {
 import { Upload } from '@mui/icons-material';
 import * as XLSX from 'xlsx';
 import axios from 'axios';
+import { API_ENDPOINTS } from '../config/apiConfig';
 
 interface ExcelImportProps {
   onImportSuccess: () => void;
@@ -201,7 +202,7 @@ const ExcelImport: React.FC<ExcelImportProps> = ({ onImportSuccess }) => {
       }
 
       const response = await axios.post<{ results: ImportResults }>(
-        'http://72.62.71.97:35000/api/trees/bulk',
+        API_ENDPOINTS.TREES_LIST/bulk',
         { trees: previewData },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -317,3 +318,6 @@ const ExcelImport: React.FC<ExcelImportProps> = ({ onImportSuccess }) => {
 };
 
 export default ExcelImport;
+
+
+

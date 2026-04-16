@@ -17,6 +17,7 @@ import {
 import { Edit, Archive, Unarchive } from '@mui/icons-material';
 import axios from 'axios';
 import EditTreeForm from '../components/EditTreeForm';
+import { API_ENDPOINTS } from '../config/apiConfig';
 
 interface Tree {
   _id: string;
@@ -76,7 +77,7 @@ const TreeDetails = () => {
         return;
       }
 
-      const response = await axios.get(`http://72.62.71.97:35000/api/trees/${id}`, {
+      const response = await axios.get(API_ENDPOINTS.TREES_LIST/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setTree(response.data);
@@ -116,7 +117,7 @@ const TreeDetails = () => {
       }
 
       await axios.put(
-        `http://72.62.71.97:35000/api/trees/${id}/archive`,
+        API_ENDPOINTS.TREES_LIST/${id}/archive`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -145,7 +146,7 @@ const TreeDetails = () => {
       }
 
       await axios.put(
-        `http://72.62.71.97:35000/api/trees/${id}/restore`,
+        API_ENDPOINTS.TREES_LIST/${id}/restore`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -328,3 +329,5 @@ const TreeDetails = () => {
 };
 
 export default TreeDetails;
+
+

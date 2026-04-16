@@ -67,6 +67,7 @@ import { message } from 'antd';
 import downloadTreeImportTemplate from '../utils/downloadTemplate';
 import { parseXlsxFile, parseCsvString, getProblemsForPayload, isPayloadValid, getValidPayloads, TreePayload } from '../utils/transformImport';
 import ImportPreview from '../components/ImportPreview';
+import { API_ENDPOINTS } from '../config/apiConfig';
 
 interface User {
   _id: string;
@@ -219,7 +220,7 @@ const ReassignModal: React.FC<ReassignModalProps> = ({ visible, fromUserId, onCa
 
   const fetchUsers = async () => {
     try {
-      const response = await axios.get<User[]>('http://72.62.71.97:35000/api/auth/users');
+      const response = await axios.get<User[]>(API_ENDPOINTS.USERS);
       setUsers(response.data.filter((user: User) => user._id !== fromUserId));
     } catch (error) {
       setError('Failed to fetch users');
@@ -234,7 +235,7 @@ const ReassignModal: React.FC<ReassignModalProps> = ({ visible, fromUserId, onCa
     
     try {
       setLoading(true);
-      await axios.post('http://72.62.71.97:35000/api/trees/reassign', {
+      await axios.post(API_ENDPOINTS.TREES_LIST/reassign', {
         fromUserId,
         toUserId: selectedUserId
       });
@@ -423,7 +424,7 @@ const UserManagement = () => {
         return;
       }
 
-      const response = await axios.get('http://72.62.71.97:35000/api/auth/users', {
+      const response = await axios.get(API_ENDPOINTS.USERS, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -431,7 +432,7 @@ const UserManagement = () => {
       const usersWithTrees = await Promise.all(response.data.map(async (user: User) => {
         try {
           const treesResponse = await axios.get(
-            `http://72.62.71.97:35000/api/trees/owner/${encodeURIComponent(user.email)}`,
+            API_ENDPOINTS.TREES_LIST/owner/${encodeURIComponent(user.email)}`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
           // Backend returns { trees: [...], stats: {...} } — ensure we store an array
@@ -527,14 +528,14 @@ const UserManagement = () => {
         };
         if (formData.password) updates.password = formData.password;
 
-        await axios.put(`http://72.62.71.97:35000/api/auth/users/${editUser._id}`, updates, {
+        await axios.put(API_ENDPOINTS.USERS/${editUser._id}`, updates, {
           headers: { Authorization: `Bearer ${token}` }
         });
         message.success('Utilisateur modifié avec succès');
       } else {
         // Créer un nouvel utilisateur
         // Admin creation endpoint
-        await axios.post('http://72.62.71.97:35000/api/auth/users', formData, {
+        await axios.post(API_ENDPOINTS.USERS, formData, {
           headers: { Authorization: `Bearer ${token}` }
         });
         message.success('Utilisateur créé avec succès');
@@ -568,7 +569,7 @@ const UserManagement = () => {
   const handleArchiveUser = async (userId: string, archived: boolean) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`http://72.62.71.97:35000/api/auth/users/${userId}`, {
+      await axios.put(API_ENDPOINTS.USERS/${userId}`, {
         archived
       }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -588,7 +589,7 @@ const UserManagement = () => {
     
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://72.62.71.97:35000/api/auth/users/${userId}`, {
+      await axios.delete(API_ENDPOINTS.USERS/${userId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -639,7 +640,7 @@ const UserManagement = () => {
       const token = localStorage.getItem('token');
       
       // Envoyer les payloads à l'endpoint d'import du backend
-      await axios.post('http://72.62.71.97:35000/api/import/trees', 
+      await axios.post(API_ENDPOINTS.TREES_BULK_IMPORT, 
         { trees: payloads }, 
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -1486,3 +1487,6 @@ const UserManagement = () => {
 };
 
 export default UserManagement;
+
+
+

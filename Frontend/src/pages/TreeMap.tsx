@@ -38,6 +38,7 @@ import {
   Visibility as VisibilityIcon,
 } from '@mui/icons-material';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { API_ENDPOINTS } from '../config/apiConfig';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import axios from 'axios';
@@ -136,11 +137,11 @@ const TreeMap = () => {
       try {
         setLoading(true);
         const token = localStorage.getItem('token');
-        let url = 'http://72.62.71.97:35000/api/trees';
+        let url = API_ENDPOINTS.TREES_LIST;
         
         // If user is not admin, fetch only their trees
         if (userRole !== 'admin' && userEmail) {
-          url = `http://72.62.71.97:35000/api/trees/owner/${encodeURIComponent(userEmail)}`;
+          url = API_ENDPOINTS.TREES_LIST/owner/${encodeURIComponent(userEmail)}`;
         }
 
         const response = await axios.get(url, {
@@ -175,11 +176,11 @@ const TreeMap = () => {
       try {
         setLoading(true);
         const token = localStorage.getItem('token');
-        let url = 'http://72.62.71.97:35000/api/trees';
+        let url = API_ENDPOINTS.TREES_LIST;
         
         // If user is not admin, fetch only their trees
         if (userRole !== 'admin' && userEmail) {
-          url = `http://72.62.71.97:35000/api/trees/owner/${encodeURIComponent(userEmail)}`;
+          url = API_ENDPOINTS.TREES_LIST/owner/${encodeURIComponent(userEmail)}`;
         }
 
         const response = await axios.get(url, {
@@ -911,3 +912,5 @@ const TreeMap = () => {
 };
 
 export default TreeMap;
+
+

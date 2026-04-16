@@ -55,6 +55,7 @@ import {
 } from 'chart.js';
 import { Line, Pie } from 'react-chartjs-2';
 import axios from 'axios';
+import { API_ENDPOINTS } from '../config/apiConfig';
 
 ChartJS.register(
   CategoryScale,
@@ -233,7 +234,7 @@ const Dashboard = () => {
         throw new Error('Token manquant');
       }
 
-      const response = await axios.get('http://72.62.71.97:35000/api/dashboard', {
+      const response = await axios.get(API_ENDPOINTS.DASHBOARD, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -680,3 +681,6 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+
+
+

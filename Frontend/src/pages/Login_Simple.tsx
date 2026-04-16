@@ -12,6 +12,7 @@ import {
 import { Login as LoginIcon } from '@mui/icons-material';
 import axios from 'axios';
 import { validation, validateFormField } from '../utils/validation';
+import { API_ENDPOINTS } from '../config/apiConfig';
 
 interface LoginProps {
   onLogin: (token: string) => void;
@@ -47,7 +48,7 @@ const Login = ({ onLogin }: LoginProps) => {
     }
 
     try {
-      const response = await axios.post('http://72.62.71.97:35000/api/auth/login', {
+      const response = await axios.post(API_ENDPOINTS.LOGIN, {
         email,
         password,
       });
@@ -130,3 +131,4 @@ const Login = ({ onLogin }: LoginProps) => {
 };
 
 export default Login;
+

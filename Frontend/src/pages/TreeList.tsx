@@ -56,6 +56,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import ExcelImport from '../components/ExcelImport';
+import { API_ENDPOINTS } from '../config/apiConfig';
 
 // Styled Components for Futuristic Design
 const GlassmorphicPaper = styled(Paper)(({ theme }) => ({
@@ -185,9 +186,9 @@ const TreeList = () => {
         return;
       }
 
-      let url = 'http://72.62.71.97:35000/api/trees';
+      let url = API_ENDPOINTS.TREES_LIST;
       if (userRole !== 'admin') {
-        url = `http://72.62.71.97:35000/api/trees/owner/${encodeURIComponent(userEmail)}`;
+        url = API_ENDPOINTS.TREES_LIST/owner/${encodeURIComponent(userEmail)}`;
       }
 
       if (showArchived && userRole === 'admin') {
@@ -747,3 +748,6 @@ const TreeList = () => {
 };
 
 export default TreeList;
+
+
+

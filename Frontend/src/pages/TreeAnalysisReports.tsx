@@ -33,6 +33,7 @@ import {
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useParams } from 'react-router-dom';
+import { API_ENDPOINTS } from '../config/apiConfig';
 
 interface Disease {
   name: string;
@@ -119,7 +120,7 @@ const TreeAnalysisReportsPage: React.FC = () => {
       }
 
       // Fetch tree info
-      const treeResponse = await fetch(`http://72.62.71.97:35000/api/trees/${treeId}`, {
+      const treeResponse = await fetch(API_ENDPOINTS.TREES_LIST/${treeId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -135,7 +136,7 @@ const TreeAnalysisReportsPage: React.FC = () => {
 
       // Fetch analyses for this tree
       const analysesResponse = await fetch(
-        `http://72.62.71.97:35000/api/analysis/tree/${treeId}`,
+        API_ENDPOINTS.ANALYSIS_DETAIL/tree/${treeId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -565,3 +566,6 @@ const TreeAnalysisReportsPage: React.FC = () => {
 };
 
 export default TreeAnalysisReportsPage;
+
+
+

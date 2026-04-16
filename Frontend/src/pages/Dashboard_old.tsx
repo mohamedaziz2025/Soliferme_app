@@ -40,6 +40,7 @@ import {
 } from 'chart.js';
 import { Line, Pie } from 'react-chartjs-2';
 import axios from 'axios';
+import { API_ENDPOINTS } from '../config/apiConfig';
 
 ChartJS.register(
   CategoryScale,
@@ -101,10 +102,10 @@ const Dashboard = () => {
       try {
         const token = localStorage.getItem('token');
         const [treesResponse, healthResponse] = await Promise.all([
-          axios.get('http://72.62.71.97:35000/api/trees/stats', {
+          axios.get(API_ENDPOINTS.TREES_LIST/stats', {
             headers: { Authorization: `Bearer ${token}` }
           }),
-          axios.get('http://72.62.71.97:35000/api/trees/health-distribution', {
+          axios.get(API_ENDPOINTS.TREES_LIST/health-distribution', {
             headers: { Authorization: `Bearer ${token}` }
           })
         ]);
@@ -123,7 +124,7 @@ const Dashboard = () => {
         // Fetch platform stats for admin users
         if (userRole === 'admin') {
           try {
-            const platformResponse = await axios.get('http://72.62.71.97:35000/api/platform/stats', {
+            const platformResponse = await axios.get(API_ENDPOINTS.DASHBOARD_STATS, {
               headers: { Authorization: `Bearer ${token}` }
             });
             platformStats = platformResponse.data;
@@ -495,3 +496,6 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+
+
+

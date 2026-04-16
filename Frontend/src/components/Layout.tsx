@@ -418,3 +418,4 @@ const Layout = ({ children, isAuthenticated, userRole, onLogout }: LayoutProps) 
 };
 
 export default Layout;
+

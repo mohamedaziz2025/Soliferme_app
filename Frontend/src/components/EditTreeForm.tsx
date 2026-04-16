@@ -13,6 +13,7 @@ import {
   Card,
 } from '@mui/material';
 import axios from 'axios';
+import { API_ENDPOINTS } from '../config/apiConfig';
 
 interface EditTreeFormProps {
   treeId: string;
@@ -82,7 +83,7 @@ const EditTreeForm: React.FC<EditTreeFormProps> = ({ treeId, onTreeUpdated }) =>
         throw new Error('No authentication token found');
       }
 
-      const response = await axios.get(`http://72.62.71.97:35000/api/trees/${treeId}`, {
+      const response = await axios.get(API_ENDPOINTS.TREES_LIST/${treeId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -126,7 +127,7 @@ const EditTreeForm: React.FC<EditTreeFormProps> = ({ treeId, onTreeUpdated }) =>
       }
 
       await axios.put(
-        `http://72.62.71.97:35000/api/trees/${treeId}`,
+        API_ENDPOINTS.TREES_LIST/${treeId}`,
         formData,
         {
           headers: { Authorization: `Bearer ${token}` }
@@ -438,3 +439,6 @@ const EditTreeForm: React.FC<EditTreeFormProps> = ({ treeId, onTreeUpdated }) =>
 };
 
 export default EditTreeForm;
+
+
+

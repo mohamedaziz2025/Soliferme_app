@@ -13,6 +13,7 @@ import {
 import { PersonAdd } from '@mui/icons-material';
 import axios from 'axios';
 import { validation, validateFormField } from '../utils/validation';
+import { API_ENDPOINTS } from '../config/apiConfig';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -61,7 +62,7 @@ const Register = () => {
     }
 
     try {
-      const response = await axios.post('http://72.62.71.97:35000/api/auth/register', formData);
+      const response = await axios.post(API_ENDPOINTS.REGISTER, formData);
       localStorage.setItem('token', response.data.token);
       navigate('/');
     } catch (err: any) {
@@ -172,3 +173,5 @@ const Register = () => {
 };
 
 export default Register;
+
+
