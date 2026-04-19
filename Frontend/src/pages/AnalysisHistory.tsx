@@ -114,8 +114,12 @@ const AnalysisHistoryPage: React.FC = () => {
       if (treeType) queryParams.append('treeType', treeType);
       if (severity) queryParams.append('severity', severity);
 
+      const historyUrl = queryParams.toString()
+        ? `${API_ENDPOINTS.ANALYSIS_HISTORY}?${queryParams.toString()}`
+        : API_ENDPOINTS.ANALYSIS_HISTORY;
+
       const response = await fetch(
-        API_ENDPOINTS.ANALYSIS_DETAIL/history?${queryParams.toString()}`,
+        historyUrl,
         {
           headers: {
             Authorization: `Bearer ${token}`,

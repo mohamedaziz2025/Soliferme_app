@@ -102,10 +102,10 @@ const Dashboard = () => {
       try {
         const token = localStorage.getItem('token');
         const [treesResponse, healthResponse] = await Promise.all([
-          axios.get(API_ENDPOINTS.TREES_LIST/stats', {
+          axios.get(`${API_ENDPOINTS.TREES_LIST}/stats`, {
             headers: { Authorization: `Bearer ${token}` }
           }),
-          axios.get(API_ENDPOINTS.TREES_LIST/health-distribution', {
+          axios.get(`${API_ENDPOINTS.TREES_LIST}/health-distribution`, {
             headers: { Authorization: `Bearer ${token}` }
           })
         ]);

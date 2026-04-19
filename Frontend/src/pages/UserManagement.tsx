@@ -246,7 +246,7 @@ const ReassignModal: React.FC<ReassignModalProps> = ({ visible, fromUserId, onCa
     
     try {
       setLoading(true);
-      await axios.post(API_ENDPOINTS.TREES_LIST/reassign', {
+      await axios.post(API_ENDPOINTS.TREES_REASSIGN, {
         fromUserId,
         toUserId: selectedUserId
       });
@@ -440,7 +440,7 @@ const UserManagement = () => {
       const usersWithTrees = await Promise.all(response.data.map(async (user: User) => {
         try {
           const treesResponse = await axios.get(
-            API_ENDPOINTS.TREES_LIST/owner/${encodeURIComponent(user.email)}`,
+            API_ENDPOINTS.TREE_BY_OWNER(user.email),
             { headers: { Authorization: `Bearer ${token}` } }
           );
           return { ...user, trees: treesResponse.data };
@@ -504,7 +504,7 @@ const UserManagement = () => {
 
       if (editUser) {
         await axios.put(
-          API_ENDPOINTS.USERS/${editUser._id}/role`,
+          `${API_ENDPOINTS.USERS}/${editUser._id}/role`,
           { role: formData.role },
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -570,7 +570,7 @@ const UserManagement = () => {
       }
 
       await axios.put(
-        API_ENDPOINTS.USERS/${userId}/archive`,
+        `${API_ENDPOINTS.USERS}/${userId}/archive`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -594,7 +594,7 @@ const UserManagement = () => {
 
   const handleReassignSuccess = async () => {
     try {
-      await axios.delete(API_ENDPOINTS.USERS/${selectedUserId}`);
+      await axios.delete(`${API_ENDPOINTS.USERS}/${selectedUserId}`);
       message.success('User deleted and trees reassigned successfully');
       setReassignModalVisible(false);
       fetchUsers(); // Refresh user list

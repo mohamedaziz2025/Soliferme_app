@@ -117,7 +117,7 @@ const TreeDetails = () => {
       }
 
       await axios.put(
-        API_ENDPOINTS.TREES_LIST/${id}/archive`,
+        `${API_ENDPOINTS.TREES_LIST}/${id}/archive`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -146,7 +146,7 @@ const TreeDetails = () => {
       }
 
       await axios.put(
-        API_ENDPOINTS.TREES_LIST/${id}/restore`,
+        `${API_ENDPOINTS.TREES_LIST}/${id}/restore`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );

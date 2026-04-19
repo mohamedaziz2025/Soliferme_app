@@ -235,7 +235,7 @@ const ReassignModal: React.FC<ReassignModalProps> = ({ visible, fromUserId, onCa
     
     try {
       setLoading(true);
-      await axios.post(API_ENDPOINTS.TREES_LIST/reassign', {
+      await axios.post(API_ENDPOINTS.TREES_REASSIGN, {
         fromUserId,
         toUserId: selectedUserId
       });
@@ -432,7 +432,7 @@ const UserManagement = () => {
       const usersWithTrees = await Promise.all(response.data.map(async (user: User) => {
         try {
           const treesResponse = await axios.get(
-            API_ENDPOINTS.TREES_LIST/owner/${encodeURIComponent(user.email)}`,
+            API_ENDPOINTS.TREE_BY_OWNER(user.email),
             { headers: { Authorization: `Bearer ${token}` } }
           );
           // Backend returns { trees: [...], stats: {...} } — ensure we store an array
@@ -528,7 +528,7 @@ const UserManagement = () => {
         };
         if (formData.password) updates.password = formData.password;
 
-        await axios.put(API_ENDPOINTS.USERS/${editUser._id}`, updates, {
+        await axios.put(`${API_ENDPOINTS.USERS}/${editUser._id}`, updates, {
           headers: { Authorization: `Bearer ${token}` }
         });
         message.success('Utilisateur modifié avec succès');
@@ -569,7 +569,7 @@ const UserManagement = () => {
   const handleArchiveUser = async (userId: string, archived: boolean) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.put(API_ENDPOINTS.USERS/${userId}`, {
+      await axios.put(`${API_ENDPOINTS.USERS}/${userId}`, {
         archived
       }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -583,13 +583,9 @@ const UserManagement = () => {
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
-      return;
-    }
-    
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(API_ENDPOINTS.USERS/${userId}`, {
+      await axios.delete(`${API_ENDPOINTS.USERS}/${userId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

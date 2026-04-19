@@ -141,7 +141,7 @@ const TreeMap = () => {
         
         // If user is not admin, fetch only their trees
         if (userRole !== 'admin' && userEmail) {
-          url = API_ENDPOINTS.TREES_LIST/owner/${encodeURIComponent(userEmail)}`;
+          url = API_ENDPOINTS.TREE_BY_OWNER(userEmail);
         }
 
         const response = await axios.get(url, {
@@ -180,7 +180,7 @@ const TreeMap = () => {
         
         // If user is not admin, fetch only their trees
         if (userRole !== 'admin' && userEmail) {
-          url = API_ENDPOINTS.TREES_LIST/owner/${encodeURIComponent(userEmail)}`;
+          url = API_ENDPOINTS.TREE_BY_OWNER(userEmail);
         }
 
         const response = await axios.get(url, {

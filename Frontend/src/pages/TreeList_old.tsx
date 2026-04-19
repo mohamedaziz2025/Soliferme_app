@@ -263,7 +263,7 @@ const TreeList = () => {
 
       let url = API_ENDPOINTS.TREES_LIST;
       if (userRole !== 'admin') {
-        url = API_ENDPOINTS.TREES_LIST/owner/${encodeURIComponent(userEmail)}`;
+        url = API_ENDPOINTS.TREE_BY_OWNER(userEmail);
       }
 
       if (showArchived && userRole === 'admin') {

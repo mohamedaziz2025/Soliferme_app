@@ -202,7 +202,7 @@ const ExcelImport: React.FC<ExcelImportProps> = ({ onImportSuccess }) => {
       }
 
       const response = await axios.post<{ results: ImportResults }>(
-        API_ENDPOINTS.TREES_LIST/bulk',
+        API_ENDPOINTS.TREES_BULK_IMPORT,
         { trees: previewData },
         { headers: { Authorization: `Bearer ${token}` } }
       );

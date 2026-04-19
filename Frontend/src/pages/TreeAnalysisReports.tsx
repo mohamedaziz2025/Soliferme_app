@@ -119,8 +119,12 @@ const TreeAnalysisReportsPage: React.FC = () => {
         throw new Error('Non authentifié');
       }
 
+      if (!treeId) {
+        throw new Error('ID d\'arbre manquant');
+      }
+
       // Fetch tree info
-      const treeResponse = await fetch(API_ENDPOINTS.TREES_LIST/${treeId}`, {
+      const treeResponse = await fetch(API_ENDPOINTS.TREE_DETAIL(treeId), {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -136,7 +140,7 @@ const TreeAnalysisReportsPage: React.FC = () => {
 
       // Fetch analyses for this tree
       const analysesResponse = await fetch(
-        API_ENDPOINTS.ANALYSIS_DETAIL/tree/${treeId}`,
+        API_ENDPOINTS.ANALYSIS_BY_TREE(treeId),
         {
           headers: {
             Authorization: `Bearer ${token}`,
