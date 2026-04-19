@@ -18,8 +18,8 @@ import Register from './pages/Register';
 import AddTreePage from './pages/AddTreePage';
 import UserManagement from './pages/UserManagement_Modern';
 import ProfilePage from './pages/ProfilePage_Modern';
-import AnalysisHistory from './pages/AnalysisHistory';
-import TreeAnalysisReports from './pages/TreeAnalysisReports';
+import AnalysisHistoryPage from './pages/AnalysisHistory';
+import TreeAnalysisReportsPage from './pages/TreeAnalysisReports';
 import AdminTreeManagement from './pages/AdminTreeManagement';
 import TreeAnalysisScreen from './pages/TreeAnalysisScreen';
 import TokenDebugPage from './pages/TokenDebugPage';
@@ -340,7 +340,7 @@ const App = () => {
               path="/analysis-history" 
               element={
                 <PrivateRoute isAuthenticated={isAuthenticated} requiredRole="admin">
-                  <AnalysisHistory />
+                  <AnalysisHistoryPage />
                 </PrivateRoute>
               } 
             />
@@ -348,7 +348,7 @@ const App = () => {
               path="/trees/:treeId/analyses" 
               element={
                 <PrivateRoute isAuthenticated={isAuthenticated}>
-                  <TreeAnalysisReports />
+                  <TreeAnalysisReportsPage />
                 </PrivateRoute>
               } 
             />
