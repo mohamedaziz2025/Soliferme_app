@@ -77,7 +77,7 @@ const TreeDetails = () => {
         return;
       }
 
-      const response = await axios.get(API_ENDPOINTS.TREES_LIST/${id}`, {
+      const response = await axios.get(`${API_ENDPOINTS.TREES_LIST}/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setTree(response.data);
