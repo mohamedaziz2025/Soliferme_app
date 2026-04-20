@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
 import '../services/api_service.dart';
+import '../services/api_exception.dart';
 import '../services/permission_service.dart';
 import '../services/tree_service.dart';
 
@@ -291,10 +292,14 @@ class _TreeAnalysisScreenState extends State<TreeAnalysisScreen> {
         _showAnalysisResults(result);
       }
     } catch (e) {
+      final userMessage = e is ApiException
+          ? e.message
+          : 'Erreur lors de l\'analyse. Veuillez reessayer.';
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur lors de l\'analyse: ${e.toString()}'),
+            content: Text(userMessage),
             backgroundColor: Colors.red,
           ),
         );

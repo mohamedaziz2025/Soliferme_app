@@ -9,6 +9,7 @@ const analysisRoutes = require('./routes/analysis');
 const dashboardRoutes = require('./routes/dashboard');
 const importRoutes = require('./routes/import');
 const syncRoutes = require('./routes/sync');
+const multer = require('multer');
 const winston = require('winston');
 const { initProducer, disconnectProducer } = require('./services/eventBus');
 const { startAlertConsumer, stopAlertConsumer } = require('./services/alertConsumer');
@@ -223,8 +224,33 @@ mongoose.connection.on('error', (err) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: 'Something went wrong!' });
+  if (!err) {
+    return next();
+  }
+
+  console.error('Unhandled server error:', err);
+
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({
+        message: 'Fichier trop volumineux'
+      });
+    }
+
+    return res.status(400).json({
+      message: err.message || 'Erreur de televersement du fichier'
+    });
+  }
+
+  const statusCode = Number(err.status || err.statusCode || 500);
+  const isServerError = statusCode >= 500;
+  const message = isServerError
+    ? (process.env.NODE_ENV === 'development'
+        ? (err.message || 'Erreur interne du serveur')
+        : 'Erreur interne du serveur')
+    : (err.message || 'Requete invalide');
+
+  return res.status(statusCode).json({ message });
 });
 
 const PORT = process.env.PORT || 5000;

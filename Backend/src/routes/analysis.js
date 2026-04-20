@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
 const auth = require('../middleware/auth');
 const { 
   upload,
@@ -13,8 +14,38 @@ const {
   deleteAnalysis
 } = require('../controllers/analysisController');
 
+const uploadAnalysisImage = (req, res, next) => {
+  upload.single('image')(req, res, (err) => {
+    if (!err) {
+      return next();
+    }
+
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({
+          message: 'Image trop volumineuse (max 10MB)'
+        });
+      }
+
+      if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+        return res.status(400).json({
+          message: 'Champ image invalide. Utilisez le champ "image".'
+        });
+      }
+
+      return res.status(400).json({
+        message: err.message || 'Erreur lors de l\'upload de l\'image'
+      });
+    }
+
+    return res.status(400).json({
+      message: err.message || 'Fichier image invalide'
+    });
+  });
+};
+
 // Create new analysis with GPS matching and AI (nouvelle version avec image)
-router.post('/create-with-ai', auth, upload.single('image'), createAnalysisWithGPSAndAI);
+router.post('/create-with-ai', auth, uploadAnalysisImage, createAnalysisWithGPSAndAI);
 
 // Create new analysis with GPS matching (legacy, sans image)
 router.post('/create-with-gps', auth, createAnalysisWithGPSMatching);

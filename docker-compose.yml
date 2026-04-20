@@ -8,7 +8,8 @@ services:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     ports:
-      - "${ZOOKEEPER_PORT_EXTERNAL:-2181}:2181"
+      # Keep ZooKeeper private; Kafka connects through the internal Docker network.
+      - "${ZOOKEEPER_BIND_IP:-127.0.0.1}:${ZOOKEEPER_PORT_EXTERNAL:-2181}:2181"
     networks:
       - soliferme-network
 
@@ -24,12 +25,13 @@ services:
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://${SERVER_HOST:-72.62.71.97}:${KAFKA_PORT_EXTERNAL:-9092}
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://${KAFKA_ADVERTISED_HOST:-127.0.0.1}:${KAFKA_PORT_EXTERNAL:-9092}
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
     ports:
-      - "${KAFKA_PORT_EXTERNAL:-9092}:29092"
+      # Keep external Kafka listener local by default to avoid Internet scans.
+      - "${KAFKA_BIND_IP:-127.0.0.1}:${KAFKA_PORT_EXTERNAL:-9092}:29092"
     volumes:
       - kafka_data:/var/lib/kafka/data
     networks:
