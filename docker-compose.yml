@@ -10,6 +10,9 @@ services:
     ports:
       # Keep ZooKeeper private; Kafka connects through the internal Docker network.
       - "${ZOOKEEPER_BIND_IP:-127.0.0.1}:${ZOOKEEPER_PORT_EXTERNAL:-2181}:2181"
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+      - zookeeper-logs:/var/lib/zookeeper/log
     networks:
       - soliferme-network
 
@@ -176,6 +179,8 @@ networks:
     driver: bridge
 
 volumes:
+  zookeeper-data:
+  zookeeper-logs:
   mongodb_data:
     driver: local
   mongodb_config:
