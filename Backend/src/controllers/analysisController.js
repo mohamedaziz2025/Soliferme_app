@@ -5,6 +5,14 @@ const fs = require('fs');
 const { getAIAnalysisService } = require('../services/aiService');
 const { publish } = require('../services/eventBus');
 
+const ALLOWED_IMAGE_EXTENSIONS = new Set(['.jpeg', '.jpg', '.png']);
+const ALLOWED_IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png']);
+const MIME_TO_EXTENSION = {
+  'image/jpeg': '.jpg',
+  'image/jpg': '.jpg',
+  'image/png': '.png',
+};
+
 // Configuration multer pour l'upload d'images
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -15,7 +23,13 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(file.originalname)}`;
+    const originalExt = path.extname(file.originalname || '').toLowerCase();
+    const mimeType = (file.mimetype || '').toLowerCase();
+    const normalizedExt = ALLOWED_IMAGE_EXTENSIONS.has(originalExt)
+      ? originalExt
+      : (MIME_TO_EXTENSION[mimeType] || '.jpg');
+
+    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1E9)}${normalizedExt}`;
     cb(null, uniqueName);
   }
 });
@@ -24,11 +38,15 @@ const upload = multer({
   storage: storage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    
-    if (extname && mimetype) {
+    const originalExt = path.extname(file.originalname || '').toLowerCase();
+    const mimeType = (file.mimetype || '').toLowerCase();
+
+    const hasAllowedExtension = ALLOWED_IMAGE_EXTENSIONS.has(originalExt);
+    const hasAllowedMimeType = ALLOWED_IMAGE_MIME_TYPES.has(mimeType);
+    const hasGenericImageMime = mimeType.startsWith('image/');
+    const hasUnknownMime = mimeType === '' || mimeType === 'application/octet-stream';
+
+    if (hasAllowedMimeType || (hasAllowedExtension && (hasGenericImageMime || hasUnknownMime))) {
       cb(null, true);
     } else {
       cb(new Error('Seules les images (JPEG, JPG, PNG) sont autorisées'));

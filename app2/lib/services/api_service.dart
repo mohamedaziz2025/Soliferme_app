@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as path;
 import '../config/app_config.dart';
 import './auth_service.dart';
 import './sync_service.dart';
@@ -310,7 +311,19 @@ class ApiService {
         request.fields['notes'] = notes.trim();
       }
 
-      request.files.add(await http.MultipartFile.fromPath('image', imageFile.path));
+      final fileExt = path.extension(imageFile.path).toLowerCase();
+      final normalizedExt = (fileExt == '.jpg' || fileExt == '.jpeg' || fileExt == '.png')
+          ? fileExt
+          : '.jpg';
+      final uploadFilename = 'capture_${DateTime.now().millisecondsSinceEpoch}$normalizedExt';
+
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'image',
+          imageFile.path,
+          filename: uploadFilename,
+        ),
+      );
 
       return request.send();
     }
