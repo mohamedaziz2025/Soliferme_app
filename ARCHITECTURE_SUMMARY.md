@@ -7,7 +7,7 @@
 Migration de:
 ```
 72.62.71.97:35000 → ${REACT_APP_API_URL}
-72.62.71.97:5001  → ${AI_SERVICE_URL}
+72.62.71.97:5001  → backend interne (${AI_SERVICE_URL})
 72.62.71.97:35002 → (supprimé)
 ```
 
@@ -70,9 +70,10 @@ Image → Backend API → Service Python YOLO
 | Fichier | Purpose | Status |
 |---------|---------|--------|
 | `app2/lib/config/app_config_v2.dart` | ✨ **NEW** - Config Flutter sans IPs | ✅ |
-| `app2/lib/config/app_config.dart` | ⚠️ À mettre à jour - Remplacer les IPs | ⏳ |
+| `app2/lib/config/app_config.dart` | Modified - Backend unique comme point d'entrée API | ✅ |
+| `app2/lib/services/analysis_service.dart` | Modified - Façade API backend (plus d'IA locale embarquée) | ✅ |
 
-**À FAIRE:** Remplacer app_config.dart pour utiliser les variables d'env lors de la compilation Flutter.
+**Résultat:** l'application mobile n'appelle plus directement le service IA, elle passe uniquement par l'API backend (`/api/analysis/create-with-ai`).
 
 ### **5. Scripts de Gestion**
 

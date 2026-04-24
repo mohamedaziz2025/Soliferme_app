@@ -2,10 +2,73 @@ const axios = require('axios');
 const FormData = require('form-data');
 const fs = require('fs');
 
+class AIServiceError extends Error {
+  constructor(message, {
+    code = 'AI_SERVICE_ERROR',
+    statusCode = 502,
+    details,
+  } = {}) {
+    super(message);
+    this.name = 'AIServiceError';
+    this.code = code;
+    this.statusCode = statusCode;
+    this.details = details;
+  }
+}
+
 class AIAnalysisService {
   constructor() {
-    this.aiServiceUrl = process.env.AI_SERVICE_URL || 'http://72.62.71.97:5001';
-    this.timeout = 30000; // 30 secondes
+    this.aiServiceUrl = process.env.AI_SERVICE_URL || 'http://127.0.0.1:5001';
+    this.timeout = Number(process.env.AI_SERVICE_TIMEOUT_MS || 30000);
+    this.healthPath = process.env.AI_SERVICE_HEALTH_PATH || '/health';
+    this.analyzePath = process.env.AI_SERVICE_ANALYZE_PATH || '/api/v1/analyze';
+    this.batchAnalyzePath = process.env.AI_SERVICE_BATCH_ANALYZE_PATH || '/api/v1/batch-analyze';
+  }
+
+  _buildUrl(path) {
+    const base = this.aiServiceUrl.replace(/\/+$/, '');
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    return `${base}${normalizedPath}`;
+  }
+
+  _normalizeAnalysisPayload(payload) {
+    if (!payload || typeof payload !== 'object') {
+      throw new AIServiceError('Reponse IA invalide', {
+        code: 'AI_INVALID_RESPONSE',
+        statusCode: 502,
+      });
+    }
+
+    if (payload.success === false) {
+      throw new AIServiceError(payload.error || 'Le service IA a retourne une erreur', {
+        code: 'AI_INFERENCE_FAILED',
+        statusCode: 502,
+        details: payload,
+      });
+    }
+
+    const diseaseDetection = payload.diseaseDetection && typeof payload.diseaseDetection === 'object'
+      ? payload.diseaseDetection
+      : {
+          detected: false,
+          diseases: [],
+          overallHealthScore: 0,
+        };
+
+    const treeAnalysis = payload.treeAnalysis && typeof payload.treeAnalysis === 'object'
+      ? payload.treeAnalysis
+      : {};
+
+    const metadata = payload.metadata && typeof payload.metadata === 'object'
+      ? payload.metadata
+      : {};
+
+    return {
+      success: true,
+      diseaseDetection,
+      treeAnalysis,
+      metadata,
+    };
   }
 
   /**
@@ -16,14 +79,23 @@ class AIAnalysisService {
    */
   async analyzeTreeImage(imagePath, options = {}) {
     try {
-      // Vérifier si le service AI est disponible
-      const isAvailable = await this.checkHealth();
-      if (!isAvailable) {
-        console.warn('Service AI non disponible, utilisation des données simulées');
-        return this._getMockAnalysis();
+      if (!imagePath || !fs.existsSync(imagePath)) {
+        throw new AIServiceError('Image introuvable pour analyse IA', {
+          code: 'AI_INPUT_IMAGE_MISSING',
+          statusCode: 400,
+        });
       }
 
-      // Préparer le formulaire
+      // Verifier que le service IA repond avant de lancer l'inference.
+      const health = await this.checkHealth();
+      if (!health.available) {
+        throw new AIServiceError('Service IA indisponible', {
+          code: 'AI_SERVICE_UNAVAILABLE',
+          statusCode: 503,
+          details: health,
+        });
+      }
+
       const form = new FormData();
       form.append('file', fs.createReadStream(imagePath));
       
@@ -35,132 +107,151 @@ class AIAnalysisService {
         form.append('gps_data', JSON.stringify(options.gps_data));
       }
 
-      // Envoyer la requête
-      const response = await axios.post(`${this.aiServiceUrl}/analyze`, form, {
+      if (options.measurements) {
+        form.append('measurements', JSON.stringify(options.measurements));
+      }
+
+      const response = await axios.post(this._buildUrl(this.analyzePath), form, {
         headers: {
           ...form.getHeaders(),
         },
         timeout: this.timeout,
       });
 
-      return response.data;
+      return this._normalizeAnalysisPayload(response.data);
     } catch (error) {
-      console.error('Erreur lors de l\'analyse AI:', error.message);
-      
-      // Retourner des données simulées en cas d'erreur
-      return this._getMockAnalysis();
+      if (error instanceof AIServiceError) {
+        throw error;
+      }
+
+      if (error.response) {
+        throw new AIServiceError('Le service IA a repondu avec une erreur', {
+          code: 'AI_SERVICE_BAD_RESPONSE',
+          statusCode: error.response.status || 502,
+          details: error.response.data,
+        });
+      }
+
+      if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND' || error.code === 'ECONNABORTED') {
+        throw new AIServiceError('Le service IA est injoignable', {
+          code: 'AI_SERVICE_UNREACHABLE',
+          statusCode: 503,
+          details: { reason: error.code },
+        });
+      }
+
+      throw new AIServiceError(`Erreur lors de l'analyse IA: ${error.message}`, {
+        code: 'AI_SERVICE_REQUEST_FAILED',
+        statusCode: 502,
+      });
     }
   }
 
   /**
    * Vérifie si le service AI est disponible
-   * @returns {Promise<boolean>}
+   * @returns {Promise<{available: boolean, statusCode?: number, latencyMs?: number, error?: string}>}
    */
   async checkHealth() {
+    const start = Date.now();
+
     try {
-      const response = await axios.get(`${this.aiServiceUrl}/health`, {
+      const response = await axios.get(this._buildUrl(this.healthPath), {
         timeout: 5000,
       });
-      return response.status === 200;
-    } catch (error) {
-      console.warn('Service AI non disponible:', error.message);
-      return false;
-    }
-  }
 
-  /**
-   * Analyse de plusieurs images en lot
-   * @param {Array<string>} imagePaths - Chemins vers les images
-   * @returns {Promise<object>}
-   */
-  async batchAnalyze(imagePaths) {
-    try {
-      const isAvailable = await this.checkHealth();
-      if (!isAvailable) {
-        console.warn('Service AI non disponible pour l\'analyse en lot');
-        return {
-          success: false,
-          error: 'Service AI non disponible',
-        };
-      }
-
-      const form = new FormData();
-      imagePaths.forEach((path) => {
-        form.append('files', fs.createReadStream(path));
-      });
-
-      const response = await axios.post(`${this.aiServiceUrl}/batch-analyze`, form, {
-        headers: {
-          ...form.getHeaders(),
-        },
-        timeout: this.timeout * imagePaths.length,
-      });
-
-      return response.data;
-    } catch (error) {
-      console.error('Erreur lors de l\'analyse en lot:', error.message);
       return {
-        success: false,
+        available: response.status >= 200 && response.status < 300,
+        statusCode: response.status,
+        latencyMs: Date.now() - start,
+      };
+    } catch (error) {
+      const statusCode = error.response ? error.response.status : undefined;
+      return {
+        available: false,
+        statusCode,
+        latencyMs: Date.now() - start,
         error: error.message,
       };
     }
   }
 
   /**
-   * Retourne une analyse simulée pour le développement
-   * @private
+   * Analyse un lot d'images via le service IA distant.
+   * @param {Array<string>} imagePaths
+   * @returns {Promise<object>}
    */
-  _getMockAnalysis() {
-    const diseases = [
-      {
-        name: 'Mildiou',
-        confidence: 87.5,
-        severity: 'medium',
-        affectedArea: 'Feuilles supérieures',
-        recommendations: [
-          'Traiter avec un fongicide approprié',
-          'Améliorer la circulation d\'air',
-          'Éviter l\'arrosage des feuilles',
-        ],
-      },
-      {
-        name: 'Chlorose',
-        confidence: 65.2,
-        severity: 'low',
-        affectedArea: 'Feuillage général',
-        recommendations: [
-          'Analyser le pH du sol',
-          'Apporter des engrais riches en fer',
-          'Vérifier le drainage',
-        ],
-      },
-    ];
+  async batchAnalyze(imagePaths = []) {
+    if (!Array.isArray(imagePaths) || imagePaths.length === 0) {
+      throw new AIServiceError('Aucune image fournie pour l\'analyse en lot', {
+        code: 'AI_BATCH_EMPTY_INPUT',
+        statusCode: 400,
+      });
+    }
 
-    const hasDisease = Math.random() > 0.3; // 70% de chance d'avoir une maladie
+    const validImagePaths = imagePaths.filter((imagePath) => imagePath && fs.existsSync(imagePath));
+    if (validImagePaths.length === 0) {
+      throw new AIServiceError('Aucune image valide trouvee pour l\'analyse en lot', {
+        code: 'AI_BATCH_NO_VALID_FILES',
+        statusCode: 400,
+      });
+    }
 
-    return {
-      success: true,
-      diseaseDetection: {
-        detected: hasDisease,
-        diseases: hasDisease ? diseases : [],
-        overallHealthScore: hasDisease ? 72 : 90,
-      },
-      treeAnalysis: {
-        species: 'Olivier',
-        estimatedAge: Math.floor(Math.random() * 15) + 5,
-        foliageDensity: Math.floor(Math.random() * 30) + 70,
-        structuralIntegrity: Math.floor(Math.random() * 20) + 80,
-        growthIndicators: {
-          newGrowth: Math.random() > 0.3,
-          leafColor: 'Vert foncé',
-          branchHealth: 'Bonne',
+    const health = await this.checkHealth();
+    if (!health.available) {
+      throw new AIServiceError('Service IA indisponible', {
+        code: 'AI_SERVICE_UNAVAILABLE',
+        statusCode: 503,
+        details: health,
+      });
+    }
+
+    const form = new FormData();
+    validImagePaths.forEach((imagePath) => {
+      form.append('files', fs.createReadStream(imagePath));
+    });
+
+    try {
+      const response = await axios.post(this._buildUrl(this.batchAnalyzePath), form, {
+        headers: {
+          ...form.getHeaders(),
         },
-      },
-      metadata: {
-        analysisMethod: 'mock_data',
-        timestamp: new Date().toISOString(),
-      },
-    };
+        timeout: this.timeout * validImagePaths.length,
+      });
+
+      if (!response.data || typeof response.data !== 'object') {
+        throw new AIServiceError('Reponse IA invalide en batch', {
+          code: 'AI_BATCH_INVALID_RESPONSE',
+          statusCode: 502,
+        });
+      }
+
+      if (response.data.success === false) {
+        throw new AIServiceError(response.data.error || 'Echec de l\'analyse IA en lot', {
+          code: 'AI_BATCH_FAILED',
+          statusCode: 502,
+          details: response.data,
+        });
+      }
+
+      return response.data;
+    } catch (error) {
+      if (error instanceof AIServiceError) {
+        throw error;
+      }
+
+      if (error.response) {
+        throw new AIServiceError('Le service IA a repondu avec une erreur (batch)', {
+          code: 'AI_BATCH_BAD_RESPONSE',
+          statusCode: error.response.status || 502,
+          details: error.response.data,
+        });
+      }
+
+      throw new AIServiceError(`Erreur lors de l'analyse IA en lot: ${error.message}`, {
+        code: 'AI_BATCH_REQUEST_FAILED',
+        statusCode: 502,
+      });
+    }
   }
 }
 
@@ -176,5 +267,6 @@ function getAIAnalysisService() {
 
 module.exports = {
   AIAnalysisService,
+  AIServiceError,
   getAIAnalysisService,
 };

@@ -77,8 +77,9 @@ services:
     container_name: soliferme-ai-service
     restart: unless-stopped
     environment:
-      - FLASK_PORT=${AI_SERVICE_PORT:-5001}
-      - AI_MODE=basic
+      - AI_SERVICE_PORT=${AI_SERVICE_PORT:-5001}
+      - AI_MODE=full
+      - AI_REQUIRE_REAL_MODEL=true
       - MODEL_PATH=/app/models
       - PYTHONUNBUFFERED=1
     ports:

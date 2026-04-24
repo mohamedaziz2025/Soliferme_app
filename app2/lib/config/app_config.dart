@@ -1,14 +1,9 @@
 class AppConfig {
-  // URL configurable via --dart-define=BACKEND_URL / AI_SERVICE_URL
-  // Defaults target the deployed server when no --dart-define is provided.
+  // URL configurable via --dart-define=BACKEND_URL.
+  // The mobile app talks only to backend REST APIs.
   static const String backendUrl = String.fromEnvironment(
     'BACKEND_URL',
     defaultValue: 'http://72.62.71.97:35000',
-  );
-
-  static const String aiServiceUrl = String.fromEnvironment(
-    'AI_SERVICE_URL',
-    defaultValue: 'http://72.62.71.97:5001',
   );
 
   static String get normalizedBackendUrl {

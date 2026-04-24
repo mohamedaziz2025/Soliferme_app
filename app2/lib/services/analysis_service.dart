@@ -1,203 +1,108 @@
 import 'dart:io';
-import 'package:tflite_flutter/tflite_flutter.dart';
-import 'package:image/image.dart' as img;
-import 'package:path_provider/path_provider.dart';
-import './notification_service.dart';
-import './sync_service.dart';
-import './local_db_service.dart';
+import './api_service.dart';
 
 class AnalysisService {
   static final AnalysisService _instance = AnalysisService._internal();
   factory AnalysisService() => _instance;
   AnalysisService._internal();
 
-  static const String _mobileNetV2ModelPath = 'assets/models/mobilenet_v2_tree_health.tflite';
-  static const List<String> _legacyModelFallbacks = [
-    'assets/models/tree_health_model.tflite',
-    'assets/models/tree_analysis_model.tflite',
-  ];
-
-  late Interpreter _interpreter;
-  final NotificationService _notificationService = NotificationService();
-  final SyncService _syncService = SyncService();
-  String _loadedModelPath = '';
+  final ApiService _apiService = ApiService();
+  bool _initialized = false;
 
   Future<void> initialize() async {
-    final candidateModels = <String>[
-      _mobileNetV2ModelPath,
-      ..._legacyModelFallbacks,
-    ];
+    _initialized = true;
+  }
 
-    for (final modelPath in candidateModels) {
-      try {
-        _interpreter = await Interpreter.fromAsset(modelPath);
-        _loadedModelPath = modelPath;
-        _validateModelCompatibility();
-        print('Model loaded successfully: $_loadedModelPath');
-        return;
-      } catch (_) {
-        // Try next candidate model.
-      }
+  Map<String, dynamic> _extractAnalysisPayload(Map<String, dynamic> result) {
+    final analysis = result['analysis'];
+    if (analysis is Map<String, dynamic>) {
+      return analysis;
     }
 
-    throw Exception(
-      'Unable to load MobileNetV2 model. Expected asset: $_mobileNetV2ModelPath',
+    final aiAnalysis = result['aiAnalysis'];
+    if (aiAnalysis is Map<String, dynamic>) {
+      return {
+        'diseaseDetection': aiAnalysis['diseaseDetection'],
+        'treeAnalysis': aiAnalysis['treeAnalysis'],
+      };
+    }
+
+    return result;
+  }
+
+  Future<Map<String, dynamic>> createRemoteAnalysis({
+    required File imageFile,
+    required String treeType,
+    required Map<String, dynamic> gpsData,
+    Map<String, dynamic>? measurements,
+    String? notes,
+  }) async {
+    if (!_initialized) {
+      await initialize();
+    }
+
+    return _apiService.createAnalysisWithAI(
+      imageFile: imageFile,
+      treeType: treeType,
+      gpsData: gpsData,
+      measurements: measurements,
+      notes: notes,
     );
   }
 
-  void _validateModelCompatibility() {
-    final inputShape = _interpreter.getInputTensor(0).shape;
+  // Legacy signature kept for backward compatibility.
+  Future<Map<String, dynamic>> analyzeTreeHealth(
+    String imagePath,
+    String treeId, {
+    String? treeType,
+    Map<String, dynamic>? gpsData,
+    Map<String, dynamic>? measurements,
+    String? notes,
+  }) async {
+    final normalizedTreeType = treeType?.trim();
+    final hasCoords = gpsData != null &&
+        gpsData['latitude'] != null &&
+        gpsData['longitude'] != null;
 
-    final expected = [1, 224, 224, 3];
-    final isCompatible =
-        inputShape.length == expected.length &&
-        inputShape.asMap().entries.every((entry) => expected[entry.key] == entry.value);
-
-    if (!isCompatible) {
+    if (normalizedTreeType == null || normalizedTreeType.isEmpty || !hasCoords) {
       throw Exception(
-        'Incompatible model input shape: $inputShape. Expected [1, 224, 224, 3] for MobileNetV2.',
+        'Remote AI analysis requires treeType and gpsData {latitude, longitude}.',
       );
     }
-  }
 
-  Future<Map<String, dynamic>> analyzeTreeHealth(String imagePath, String treeId) async {
-    try {
-      // Load and preprocess the image
-      final imageBytes = File(imagePath).readAsBytesSync();
-      final image = img.decodeImage(imageBytes)!;
-      final resizedImage = img.copyResize(image, width: 224, height: 224);
-      
-      // Convert image to float32 array and normalize
-      var input = List.generate(
-        1,
-        (index) => List.generate(
-          224,
-          (y) => List.generate(
-            224,
-            (x) {
-              var pixel = resizedImage.getPixel(x, y);
-              return [
-                img.getRed(pixel) / 255.0,
-                img.getGreen(pixel) / 255.0,
-                img.getBlue(pixel) / 255.0,
-              ];
-            },
-          ),
-        ),
-      );
+    final response = await createRemoteAnalysis(
+      imageFile: File(imagePath),
+      treeType: normalizedTreeType,
+      gpsData: gpsData!,
+      measurements: measurements,
+      notes: notes,
+    );
 
-      // Prepare output tensor
-      var output = List.filled(1 * 5, 0).reshape([1, 5]); // 5 classes
-
-      // Run inference
-      _interpreter.run(input, output);
-
-      // Process results
-      final results = _processResults(output[0]);
-      
-      // Save analysis results
-      await _saveAnalysisResults(treeId, results);
-      
-      // Notify if health issues detected
-      if (results['health_score'] < 0.7) {
-        await _notificationService.showTreeHealthAlert(
-          treeId: treeId,
-          healthIssue: results['primary_issue'],
-          severity: results['severity'],
-        );
-      }
-
-      // Queue for sync
-      await _syncService.queueLocalChange(
-        'analysis',
-        treeId,
-        results,
-      );
-
-      return results;
-    } catch (e) {
-      print('Error during analysis: $e');
-      rethrow;
-    }
-  }
-
-  Map<String, dynamic> _processResults(List<dynamic> output) {
-    final List<String> healthLabels = [
-      'healthy',
-      'nutrient_deficiency',
-      'pest_infestation',
-      'disease',
-      'water_stress'
-    ];
-
-    // Find highest probability and its index
-    int maxIndex = 0;
-    double maxProb = output[0];
-    for (int i = 1; i < output.length; i++) {
-      if (output[i] > maxProb) {
-        maxProb = output[i];
-        maxIndex = i;
-      }
-    }
-
-    // Calculate overall health score (inverse of problem probability)
-    double healthScore = healthLabels[maxIndex] == 'healthy' 
-        ? maxProb 
-        : 1 - maxProb;
-
-    // Determine severity level
-    String severity = 'low';
-    if (healthScore < 0.3) severity = 'high';
-    else if (healthScore < 0.7) severity = 'medium';
-
-    return {
-      'timestamp': DateTime.now().toIso8601String(),
-      'model_path': _loadedModelPath,
-      'health_score': healthScore,
-      'primary_issue': healthLabels[maxIndex],
-      'severity': severity,
-      'confidence': maxProb,
-      'all_probabilities': Map.fromIterables(healthLabels, output),
-    };
-  }
-
-  Future<void> _saveAnalysisResults(String treeId, Map<String, dynamic> results) async {
-    // persist to file (legacy)
-    final directory = await getApplicationDocumentsDirectory();
-    final file = File('${directory.path}/analysis_$treeId.json');
-    await file.writeAsString(results.toString());
-
-    // also store in local database for offline access
-    try {
-      await LocalDatabase.instance.saveAnalysis(treeId, results.toString());
-    } catch (e) {
-      print('Failed to write analysis to local DB: $e');
-    }
+    return _extractAnalysisPayload(response);
   }
 
   Future<Map<String, dynamic>?> getLastAnalysis(String treeId) async {
     try {
-      final directory = await getApplicationDocumentsDirectory();
-      final file = File('${directory.path}/analysis_$treeId.json');
-      
-      if (await file.exists()) {
-        final contents = await file.readAsString();
-        // Parse the string back to Map
-        return Map<String, dynamic>.from(eval(contents));
+      final analyses = await _apiService.getAnalysesByTreeId(treeId);
+      if (analyses.isEmpty) {
+        return null;
       }
-      // fallback to local database
-      final dbData = await LocalDatabase.instance.getAnalysis(treeId);
-      if (dbData != null) {
-        return Map<String, dynamic>.from(eval(dbData));
+
+      final latest = analyses.first;
+      if (latest is Map<String, dynamic>) {
+        return latest;
       }
-      return null;
+
+      if (latest is Map) {
+        return Map<String, dynamic>.from(latest);
+      }
+
+      return <String, dynamic>{};
     } catch (e) {
       print('Error retrieving analysis: $e');
       return null;
     }
   }
 
-  void dispose() {
-    _interpreter.close();
-  }
+  void dispose() {}
 }

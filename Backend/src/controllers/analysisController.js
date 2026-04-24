@@ -2,7 +2,7 @@ const { Analysis, Tree } = require('../models/schema');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { getAIAnalysisService } = require('../services/aiService');
+const { getAIAnalysisService, AIServiceError } = require('../services/aiService');
 const { publish } = require('../services/eventBus');
 
 const ALLOWED_IMAGE_EXTENSIONS = new Set(['.jpeg', '.jpg', '.png']);
@@ -68,59 +68,6 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
   return R * c; // Distance in meters
-}
-
-// Helper function: Analyse locale intégrée (sans service distant)
-function generateLocalAnalysis(treeType, imagePath) {
-  // Générer des données d'analyse réalistes basées sur le type d'arbre
-  const healthScore = Math.floor(Math.random() * 30) + 70; // 70-100
-  const hasDisease = Math.random() < 0.2; // 20% chance de maladie
-  
-  const analysis = {
-    success: true,
-    diseaseDetection: {
-      detected: hasDisease,
-      diseases: [],
-      overallHealthScore: healthScore
-    },
-    treeAnalysis: {
-      species: treeType,
-      estimatedAge: Math.floor(Math.random() * 20) + 5, // 5-25 ans
-      foliageDensity: Math.floor(Math.random() * 30) + 70, // 70-100%
-      structuralIntegrity: Math.floor(Math.random() * 20) + 80, // 80-100%
-      growthIndicators: {
-        newGrowth: Math.random() > 0.3,
-        leafColor: healthScore > 80 ? 'green' : healthScore > 60 ? 'yellow-green' : 'yellow',
-        branchHealth: healthScore > 80 ? 'good' : healthScore > 60 ? 'fair' : 'poor'
-      }
-    }
-  };
-
-  // Si maladie détectée, ajouter des détails
-  if (hasDisease) {
-    const diseases = [
-      { name: 'Taches foliaires', severity: 'low' },
-      { name: 'Oïdium', severity: 'medium' },
-      { name: 'Rouille', severity: 'low' },
-      { name: 'Anthracnose', severity: 'medium' },
-      { name: 'Pourriture des racines', severity: 'high' }
-    ];
-    
-    const disease = diseases[Math.floor(Math.random() * diseases.length)];
-    analysis.diseaseDetection.diseases.push({
-      name: disease.name,
-      confidence: Math.floor(Math.random() * 30) + 60, // 60-90%
-      severity: disease.severity,
-      affectedArea: Math.floor(Math.random() * 40) + 10, // 10-50%
-      recommendations: [
-        'Inspection visuelle détaillée recommandée',
-        'Surveillance régulière nécessaire',
-        'Consulter un arboriste si les symptômes persistent'
-      ]
-    });
-  }
-
-  return analysis;
 }
 
 // Create analysis with GPS-based tree matching and AI analysis
@@ -198,7 +145,8 @@ const createAnalysisWithGPSAndAI = async (req, res) => {
     const aiStart = Date.now();
     const aiResults = await aiService.analyzeTreeImage(imagePath, {
       tree_type: treeType,
-      gps_data: gpsData
+      gps_data: gpsData,
+      measurements,
     });
     const aiInferenceMs = Date.now() - aiStart;
     console.log('✅ Analyse YOLO terminée');
@@ -363,6 +311,16 @@ const createAnalysisWithGPSAndAI = async (req, res) => {
     });
 
   } catch (error) {
+    if (error instanceof AIServiceError) {
+      console.error('❌ Erreur service IA:', error.message, error.details || '');
+      return res.status(error.statusCode || 502).json({
+        message: 'Le service IA est indisponible ou a retourne une erreur',
+        code: error.code,
+        error: error.message,
+        details: error.details,
+      });
+    }
+
     console.error('❌ Erreur lors de la création de l\'analyse:', error);
     console.error('Stack trace:', error.stack);
     res.status(500).json({ 

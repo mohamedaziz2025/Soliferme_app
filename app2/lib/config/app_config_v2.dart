@@ -13,11 +13,6 @@ class AppConfig {
     'BACKEND_URL',
     defaultValue: _getDefaultBackendUrl,
   );
-  
-  static const String aiServiceUrl = String.fromEnvironment(
-    'AI_SERVICE_URL', 
-    defaultValue: _getDefaultAiServiceUrl,
-  );
 
   // ============================================================
   // ENDPOINTS API
@@ -48,13 +43,9 @@ class AppConfig {
   // ============================================================
   
   static const String _getDefaultBackendUrl = _detectBackendUrl;
-  static const String _getDefaultAiServiceUrl = _detectAiServiceUrl;
   
   /// Détecte l'URL du backend selon la plateforme d'exécution
   static const String _detectBackendUrl = _platformBackendUrl;
-  
-  /// Détecte l'URL du service AI selon la plateforme d'exécution
-  static const String _detectAiServiceUrl = _platformAiServiceUrl;
   
   // URLs par plateforme
   // Emulateur Android: 10.0.2.2 pointe vers localhost de l'hôte
@@ -62,7 +53,6 @@ class AppConfig {
   // Appareil physique: IP du serveur ou DNS
   
   static const String _platformBackendUrl = 'http://72.62.71.97:35000';
-  static const String _platformAiServiceUrl = 'http://72.62.71.97:5001';
   
   // ============================================================
   // CONFIGURATION PAR BUILD TYPE
@@ -70,11 +60,9 @@ class AppConfig {
   
   /// Configuration pour développement (debug)
   static const String debugBackendUrl = 'http://72.62.71.97:35000';
-  static const String debugAiUrl = 'http://72.62.71.97:5001';
   
   /// Configuration pour production
   static const String prodBackendUrl = 'http://72.62.71.97:35000';
-  static const String prodAiUrl = 'http://72.62.71.97:5001';
   
   // ============================================================
   // UTILITAIRES
