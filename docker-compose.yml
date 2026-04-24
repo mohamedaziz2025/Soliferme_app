@@ -1,5 +1,5 @@
 services:
-  # Zookeeper (Kafka dependency)
+  # Zookeeper
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     container_name: soliferme-zookeeper
@@ -8,7 +8,6 @@ services:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     ports:
-      # Keep ZooKeeper private; Kafka connects through the internal Docker network.
       - "${ZOOKEEPER_BIND_IP:-127.0.0.1}:${ZOOKEEPER_PORT_EXTERNAL:-2181}:2181"
     volumes:
       - zookeeper-data:/var/lib/zookeeper/data
@@ -16,7 +15,7 @@ services:
     networks:
       - soliferme-network
 
-  # Apache Kafka event bus
+  # Apache Kafka
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     container_name: soliferme-kafka
@@ -28,13 +27,15 @@ services:
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://${KAFKA_ADVERTISED_HOST:-127.0.0.1}:${KAFKA_PORT_EXTERNAL:-9092}
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://${KAFKA_ADVERTISED_HOST:-127.0.0.1}:${KAFKA_PORT_EXTERNAL:-29092}
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_JMX_PORT: 9997
+      KAFKA_JMX_HOSTNAME: kafka
     ports:
-      # Keep external Kafka listener local by default to avoid Internet scans.
-      - "${KAFKA_BIND_IP:-127.0.0.1}:${KAFKA_PORT_EXTERNAL:-9092}:29092"
+      - "${KAFKA_BIND_IP:-127.0.0.1}:${KAFKA_PORT_EXTERNAL:-29092}:29092"
+      - "127.0.0.1:9997:9997"
     volumes:
       - kafka_data:/var/lib/kafka/data
     networks:
@@ -46,6 +47,69 @@ services:
       retries: 10
       start_period: 40s
 
+  # Kafka Exporter — scrapes Kafka metrics for Prometheus
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:latest
+    container_name: soliferme-kafka-exporter
+    restart: unless-stopped
+    command:
+      - --kafka.server=kafka:9092
+      - --web.listen-address=:9308
+    ports:
+      - "127.0.0.1:9308:9308"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - soliferme-network
+
+  # Zookeeper Exporter — scrapes ZK metrics for Prometheus
+  zookeeper-exporter:
+    image: dabealu/zookeeper-exporter:latest
+    container_name: soliferme-zk-exporter
+    restart: unless-stopped
+    command:
+      - --zk-hosts=zookeeper:2181
+      - --listen=0.0.0.0:9141
+    ports:
+      - "127.0.0.1:9141:9141"
+    depends_on:
+      - zookeeper
+    networks:
+      - soliferme-network
+
+  # Prometheus — time-series store
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: soliferme-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "0.0.0.0:9090:9090"
+    networks:
+      - soliferme-network
+
+  # Grafana — dashboard UI
+  grafana:
+    image: grafana/grafana:latest
+    container_name: soliferme-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-soliferme2026}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://${SERVER_HOST:-127.0.0.1}:${GRAFANA_PORT_EXTERNAL:-33000}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "${GRAFANA_PORT_EXTERNAL:-33000}:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - soliferme-network
   # MongoDB Database
   mongodb:
     image: mongo:7.0
@@ -69,7 +133,7 @@ services:
       retries: 5
       start_period: 40s
 
-  # Service AI Python (Flask)
+  # ... Service AI Python (Flask)
   ai-service:
     build:
       context: ./Backend
@@ -169,17 +233,18 @@ services:
     networks:
       - soliferme-network
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:38000/"]
       interval: 30s
       timeout: 3s
       retries: 3
       start_period: 10s
-
 networks:
   soliferme-network:
     driver: bridge
 
 volumes:
+  prometheus_data:
+  grafana_data:
   zookeeper-data:
   zookeeper-logs:
   mongodb_data:
