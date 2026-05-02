@@ -101,6 +101,10 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-soliferme2026}
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_SERVER_ROOT_URL=http://${SERVER_HOST:-127.0.0.1}:${GRAFANA_PORT_EXTERNAL:-33000}
+      - GF_INSTALL_PLUGINS=grafana-mongodb-datasource
+      - MONGO_USER=${MONGO_USER:-admin}
+      - MONGO_PASSWORD=${MONGO_PASSWORD:-soliferme2026}
+      - MONGO_DATABASE=${MONGO_DATABASE:-soliferme}
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
@@ -196,6 +200,17 @@ services:
       - ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL:-}
       - ALERT_WEBHOOK_AUTH_HEADER=${ALERT_WEBHOOK_AUTH_HEADER:-}
       - ALERT_WEBHOOK_TIMEOUT_MS=${ALERT_WEBHOOK_TIMEOUT_MS:-5000}
+      - DIAGNOSTIC_CONSUMER_ENABLED=${DIAGNOSTIC_CONSUMER_ENABLED:-true}
+      - DIAGNOSTIC_GROUP_ID=${DIAGNOSTIC_GROUP_ID:-fruitytrack-diagnostic-consumer}
+      - DIAGNOSTIC_TOPIC=${DIAGNOSTIC_TOPIC:-fruitytrack.diagnostic.pathology}
+      - DIAGNOSTIC_CONSUMER_RETRY_MS=${DIAGNOSTIC_CONSUMER_RETRY_MS:-10000}
+      - EMAIL_HOST=${EMAIL_HOST:-smtp.gmail.com}
+      - EMAIL_PORT=${EMAIL_PORT:-587}
+      - EMAIL_SECURE=${EMAIL_SECURE:-false}
+      - EMAIL_USER=${EMAIL_USER:-}
+      - EMAIL_PASS=${EMAIL_PASS:-}
+      - EMAIL_FROM=${EMAIL_FROM:-}
+      - EMAIL_TO=${EMAIL_TO:-}
     ports:
       - "${BACKEND_PORT_EXTERNAL:-35000}:${BACKEND_PORT:-5000}"
     volumes:
@@ -233,7 +248,7 @@ services:
     networks:
       - soliferme-network
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:38000/"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
       interval: 30s
       timeout: 3s
       retries: 3

@@ -42,7 +42,6 @@ import { API_ENDPOINTS } from '../config/apiConfig';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import axios from 'axios';
-import AddTreeForm from '../components/AddTreeForm';
 import MapLegend from '../components/MapLegend';
 
 // Fix for default marker icons in React-Leaflet
@@ -456,11 +455,6 @@ const TreeMap = () => {
         </Box>
       </Fade>
       
-      {/* Afficher le formulaire d'ajout uniquement pour les admins */}
-      {userRole === 'admin' && (
-        <AddTreeForm onTreeAdded={handleTreeAdded} />
-      )}
-
       {/* Statistiques ultra modernes */}
       <Fade in timeout={1200}>
         <Box sx={{ mb: 4 }}>

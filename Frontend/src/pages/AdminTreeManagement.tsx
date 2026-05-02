@@ -4,7 +4,6 @@ import {
   Paper,
   Typography,
   Box,
-  Button,
   TextField,
   InputAdornment,
   Chip,
@@ -13,10 +12,6 @@ import {
   CardContent,
   CardActions,
   IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   CircularProgress,
   Alert,
   useTheme,
@@ -31,7 +26,6 @@ import {
   Search as SearchIcon,
   Add as AddIcon,
   Edit as EditIcon,
-  Delete as DeleteIcon,
   Archive as ArchiveIcon,
   Unarchive as UnarchiveIcon,
   CheckCircle as CheckCircleIcon,
@@ -45,9 +39,7 @@ import {
   Spa as SpaIcon,
 } from '@mui/icons-material';
 import axios from 'axios';
-import { API_ENDPOINTS, BACKEND_API } from '../config/apiConfig';
-
-const API_URL = BACKEND_API.TREES;
+import { API_ENDPOINTS } from '../config/apiConfig';
 
 interface Tree {
   _id: string;
@@ -67,7 +59,7 @@ interface Tree {
     present: boolean;
     estimatedQuantity?: number;
   };
-  archived?: boolean;
+  isArchived?: boolean;
   userId?: {
     _id: string;
     name: string;
@@ -111,7 +103,6 @@ const StatCard = styled(Card)(({ theme }) => ({
 const AdminTreeManagement: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
   
   const [trees, setTrees] = useState<Tree[]>([]);
   const [filteredTrees, setFilteredTrees] = useState<Tree[]>([]);
@@ -119,8 +110,6 @@ const AdminTreeManagement: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedTree, setSelectedTree] = useState<Tree | null>(null);
 
   useEffect(() => {
     loadTrees();
@@ -135,10 +124,11 @@ const AdminTreeManagement: React.FC = () => {
       setLoading(true);
       setError(null);
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/trees`, {
+      const response = await axios.get(API_ENDPOINTS.TREES_LIST, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setTrees(response.data);
+      const treesData = response.data.trees || response.data;
+      setTrees(treesData);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Erreur lors du chargement des arbres');
     } finally {
@@ -164,29 +154,13 @@ const AdminTreeManagement: React.FC = () => {
     setFilteredTrees(filtered);
   };
 
-  const handleDeleteTree = async () => {
-    if (!selectedTree) return;
-
-    try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`${API_URL}/trees/${selectedTree._id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setDeleteDialogOpen(false);
-      loadTrees();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Erreur lors de la suppression');
-    }
-  };
-
   const handleArchiveTree = async (treeId: string, currentArchived: boolean) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.patch(
-        `${API_URL}/trees/${treeId}/archive`,
-        { archived: !currentArchived },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const endpoint = currentArchived
+        ? `${API_ENDPOINTS.TREES_LIST}/${treeId}/restore`
+        : `${API_ENDPOINTS.TREES_LIST}/${treeId}/archive`;
+      await axios.put(endpoint, {}, { headers: { Authorization: `Bearer ${token}` } });
       loadTrees();
     } catch (err: any) {
       setError(err.response?.data?.message || 'Erreur lors de l\'archivage');
@@ -407,7 +381,7 @@ const AdminTreeManagement: React.FC = () => {
                     <Typography variant="h6" sx={{ ml: 1, flexGrow: 1 }}>
                       {tree.treeType}
                     </Typography>
-                    {tree.archived && (
+                    {tree.isArchived && (
                       <Chip 
                         label="Archivé" 
                         size="small" 
@@ -469,7 +443,7 @@ const AdminTreeManagement: React.FC = () => {
                   )}
                 </CardContent>
 
-                <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
+                <CardActions sx={{ justifyContent: 'flex-start', px: 2, pb: 2 }}>
                   <Box>
                     <Tooltip title="Modifier">
                       <IconButton
@@ -479,12 +453,12 @@ const AdminTreeManagement: React.FC = () => {
                         <EditIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title={tree.archived ? 'Désarchiver' : 'Archiver'}>
+                    <Tooltip title={tree.isArchived ? 'Désarchiver' : 'Archiver'}>
                       <IconButton
                         size="small"
-                        onClick={() => handleArchiveTree(tree._id, tree.archived || false)}
+                        onClick={() => handleArchiveTree(tree._id, tree.isArchived || false)}
                       >
-                        {tree.archived ? (
+                        {tree.isArchived ? (
                           <UnarchiveIcon fontSize="small" />
                         ) : (
                           <ArchiveIcon fontSize="small" />
@@ -492,18 +466,6 @@ const AdminTreeManagement: React.FC = () => {
                       </IconButton>
                     </Tooltip>
                   </Box>
-                  <Tooltip title="Supprimer">
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => {
-                        setSelectedTree(tree);
-                        setDeleteDialogOpen(true);
-                      }}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
                 </CardActions>
               </StyledCard>
             </Grid>
@@ -531,37 +493,6 @@ const AdminTreeManagement: React.FC = () => {
         </Fab>
       </Zoom>
 
-      {/* Dialog de confirmation de suppression */}
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        maxWidth="xs"
-        fullWidth
-        PaperProps={{
-          sx: { borderRadius: 3 }
-        }}
-      >
-        <DialogTitle>Confirmer la suppression</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Êtes-vous sûr de vouloir supprimer l'arbre "{selectedTree?.treeType}" ?
-            Cette action est irréversible.
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setDeleteDialogOpen(false)} sx={{ borderRadius: 2 }}>
-            Annuler
-          </Button>
-          <Button
-            onClick={handleDeleteTree}
-            color="error"
-            variant="contained"
-            sx={{ borderRadius: 2 }}
-          >
-            Supprimer
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Container>
   );
 };

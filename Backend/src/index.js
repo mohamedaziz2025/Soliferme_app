@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const path = require('path');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const { securityMiddleware, limiter } = require('./middleware/security');
@@ -9,10 +10,12 @@ const analysisRoutes = require('./routes/analysis');
 const dashboardRoutes = require('./routes/dashboard');
 const importRoutes = require('./routes/import');
 const syncRoutes = require('./routes/sync');
+const imageRoutes = require('./routes/images');
 const multer = require('multer');
 const winston = require('winston');
 const { initProducer, disconnectProducer } = require('./services/eventBus');
 const { startAlertConsumer, stopAlertConsumer } = require('./services/alertConsumer');
+const { startDiagnosticConsumer, stopDiagnosticConsumer } = require('./services/diagnosticConsumer');
 
 // Configuration du logger
 const logger = winston.createLogger({
@@ -42,6 +45,13 @@ app.use(limiter);
 app.use(securityMiddleware);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+const uploadsRoot = process.env.UPLOADS_DIR
+  ? path.resolve(process.env.UPLOADS_DIR)
+  : path.join(__dirname, '..', 'uploads');
+
+app.use('/uploads', express.static(uploadsRoot));
+app.use('/images', imageRoutes);
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -258,16 +268,19 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT} and accessible from all network interfaces`);
   initProducer();
   startAlertConsumer();
+  startDiagnosticConsumer();
 });
 
 process.on('SIGINT', async () => {
   await stopAlertConsumer();
+  await stopDiagnosticConsumer();
   await disconnectProducer();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
   await stopAlertConsumer();
+  await stopDiagnosticConsumer();
   await disconnectProducer();
   process.exit(0);
 });

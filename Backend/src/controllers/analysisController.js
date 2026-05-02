@@ -1,4 +1,5 @@
 const { Analysis, Tree } = require('../models/schema');
+const ImageAsset = require('../models/imageAsset');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -137,7 +138,23 @@ const createAnalysisWithGPSAndAI = async (req, res) => {
     }
 
     const imagePath = req.file.path;
-    const imageUrl = `/uploads/analysis/${req.file.filename}`;
+    const defaultImageUrl = `/uploads/analysis/${req.file.filename}`;
+    let imageUrl = defaultImageUrl;
+    let imageAsset = null;
+
+    try {
+      imageAsset = await ImageAsset.create({
+        filename: req.file.filename,
+        relativePath: `analysis/${req.file.filename}`,
+        contentType: req.file.mimetype,
+        size: req.file.size,
+        origin: 'analysis',
+        createdBy: req.user && req.user.userId ? req.user.userId : null,
+      });
+      imageUrl = `/images/${imageAsset._id}`;
+    } catch (error) {
+      console.warn('Image asset record failed:', error.message);
+    }
 
     // 1. Analyse AI avec le service Python YOLO
     console.log('🔍 Appel du service Python YOLO en cours...');
@@ -258,6 +275,17 @@ const createAnalysisWithGPSAndAI = async (req, res) => {
     const analysis = new Analysis(analysisData);
 
     await analysis.save();
+
+    if (imageAsset) {
+      try {
+        await ImageAsset.findByIdAndUpdate(imageAsset._id, {
+          analysisId: analysis._id,
+          treeId: matchedTree.treeId,
+        });
+      } catch (error) {
+        console.warn('Image asset update failed:', error.message);
+      }
+    }
     console.log(`📊 Analyse créée avec succès`);
 
     // 6. Update tree status based on disease detection

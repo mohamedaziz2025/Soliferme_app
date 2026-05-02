@@ -1,0 +1,14 @@
+apiVersion: 1
+
+datasources:
+  - name: MongoDB
+    type: grafana-mongodb-datasource
+    access: proxy
+    editable: true
+    url: mongodb://mongodb:27017
+    jsonData:
+      database: ${MONGO_DATABASE}
+      authType: credentials
+      user: ${MONGO_USER}
+    secureJsonData:
+      password: ${MONGO_PASSWORD}
