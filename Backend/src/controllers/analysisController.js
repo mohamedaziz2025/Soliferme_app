@@ -71,6 +71,76 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   return R * c; // Distance in meters
 }
 
+function parseNumberValue(value) {
+  if (value === null || value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+
+  const matches = value.match(/-?\d+(?:[\.,]\d+)?/g);
+  if (!matches || matches.length === 0) {
+    return undefined;
+  }
+
+  const numbers = matches
+    .map((match) => Number.parseFloat(match.replace(',', '.')))
+    .filter((num) => Number.isFinite(num));
+
+  if (numbers.length === 0) {
+    return undefined;
+  }
+
+  if (numbers.length === 1) {
+    return numbers[0];
+  }
+
+  return numbers.reduce((sum, num) => sum + num, 0) / numbers.length;
+}
+
+function normalizeTreeAnalysis(treeAnalysis) {
+  if (!treeAnalysis || typeof treeAnalysis !== 'object') {
+    return {};
+  }
+
+  const normalized = { ...treeAnalysis };
+
+  if (Object.prototype.hasOwnProperty.call(normalized, 'estimatedAge')) {
+    const estimatedAge = parseNumberValue(normalized.estimatedAge);
+    if (estimatedAge === undefined) {
+      delete normalized.estimatedAge;
+    } else {
+      normalized.estimatedAge = estimatedAge;
+    }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(normalized, 'foliageDensity')) {
+    const foliageDensity = parseNumberValue(normalized.foliageDensity);
+    if (foliageDensity === undefined) {
+      delete normalized.foliageDensity;
+    } else {
+      normalized.foliageDensity = foliageDensity;
+    }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(normalized, 'structuralIntegrity')) {
+    const structuralIntegrity = parseNumberValue(normalized.structuralIntegrity);
+    if (structuralIntegrity === undefined) {
+      delete normalized.structuralIntegrity;
+    } else {
+      normalized.structuralIntegrity = structuralIntegrity;
+    }
+  }
+
+  return normalized;
+}
+
 // Create analysis with GPS-based tree matching and AI analysis
 const createAnalysisWithGPSAndAI = async (req, res) => {
   try {
@@ -251,6 +321,7 @@ const createAnalysisWithGPSAndAI = async (req, res) => {
     }
 
     // 5. Create the analysis with AI results
+    const normalizedTreeAnalysis = normalizeTreeAnalysis(aiResults.treeAnalysis);
     const analysisData = {
       treeId: matchedTree.treeId,
       date: new Date(),
@@ -259,7 +330,7 @@ const createAnalysisWithGPSAndAI = async (req, res) => {
         imageType: 'analysis'
       }],
       diseaseDetection: aiResults.diseaseDetection,
-      treeAnalysis: aiResults.treeAnalysis,
+      treeAnalysis: normalizedTreeAnalysis,
       gpsData,
       measurements: measurements || {},
       notes: notes || '',
@@ -334,7 +405,7 @@ const createAnalysisWithGPSAndAI = async (req, res) => {
         method: 'python-yolo',
         timestamp: new Date().toISOString(),
         diseaseDetection: aiResults.diseaseDetection,
-        treeAnalysis: aiResults.treeAnalysis
+        treeAnalysis: normalizedTreeAnalysis
       }
     });
 
