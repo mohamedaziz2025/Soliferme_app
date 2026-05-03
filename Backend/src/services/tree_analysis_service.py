@@ -27,6 +27,13 @@ except ImportError:
 try:
     import torch
     TORCH_AVAILABLE = True
+    nnpack_backend = getattr(torch.backends, "nnpack", None)
+    if nnpack_backend is not None:
+        try:
+            if not nnpack_backend.is_available():
+                nnpack_backend.enabled = False
+        except Exception:
+            nnpack_backend.enabled = False
 except ImportError:
     TORCH_AVAILABLE = False
     logger.warning("⚠️ PyTorch non disponible → pip install torch")
