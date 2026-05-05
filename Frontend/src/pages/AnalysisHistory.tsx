@@ -36,7 +36,7 @@ import {
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { API_ENDPOINTS } from '../config/apiConfig';
+import { API_BASE_URL, API_ENDPOINTS } from '../config/apiConfig';
 
 interface Disease {
   name: string;
@@ -55,6 +55,17 @@ interface Analysis {
     longitude: number;
     accuracy?: number;
   };
+  images?: Array<{
+    url?: string;
+    imageType?: string;
+  }>;
+  measurements?: {
+    height?: number;
+    width?: number;
+    density?: number;
+  };
+  fruitCount?: number;
+  treeHealth?: string;
   diseaseDetection: {
     detected: boolean;
     diseases: Disease[];
@@ -65,6 +76,11 @@ interface Analysis {
     estimatedAge?: number;
     foliageDensity?: number;
     structuralIntegrity?: number;
+    growthIndicators?: {
+      newGrowth?: boolean;
+      leafColor?: string;
+      branchHealth?: string;
+    };
   };
   createdBy?: {
     name: string;
@@ -172,6 +188,44 @@ const AnalysisHistoryPage: React.FC = () => {
     if (score >= 60) return '#ff9800';
     return '#f44336';
   };
+
+  const formatValue = (value: unknown) => {
+    if (value === null || value === undefined || value === '') {
+      return 'Non spécifié';
+    }
+    if (typeof value === 'number' && Number.isNaN(value)) {
+      return 'Non spécifié';
+    }
+    return String(value);
+  };
+
+  const formatNumber = (value?: number, unit?: string) => {
+    if (value === null || value === undefined || Number.isNaN(value)) {
+      return 'Non spécifié';
+    }
+    return unit ? `${value} ${unit}` : String(value);
+  };
+
+  const formatBoolean = (value?: boolean) => {
+    if (value === null || value === undefined) {
+      return 'Non spécifié';
+    }
+    return value ? 'Oui' : 'Non';
+  };
+
+  const formatImageUrl = (url?: string) => {
+    if (!url) {
+      return '';
+    }
+    if (/^https?:\/\//i.test(url)) {
+      return url;
+    }
+    return `${API_BASE_URL}${url}`;
+  };
+
+  const selectedDiseases = selectedAnalysis?.diseaseDetection?.diseases || [];
+  const selectedImages = selectedAnalysis?.images || [];
+  const selectedHealthScore = selectedAnalysis?.diseaseDetection?.overallHealthScore;
 
   const exportToCSV = () => {
     const headers = ['Date', 'Arbre ID', 'Type', 'Score Santé', 'Maladies', 'GPS'];
@@ -450,9 +504,9 @@ const AnalysisHistoryPage: React.FC = () => {
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h6">Détails de l'Analyse</Typography>
                 <Chip
-                  label={`Score: ${selectedAnalysis.diseaseDetection.overallHealthScore}%`}
+                  label={`Score: ${selectedHealthScore ?? 'Non spécifié'}${selectedHealthScore !== undefined ? '%' : ''}`}
                   sx={{
-                    bgcolor: getHealthScoreColor(selectedAnalysis.diseaseDetection.overallHealthScore),
+                    bgcolor: getHealthScoreColor(selectedHealthScore ?? 0),
                     color: 'white',
                     fontWeight: 'bold',
                   }}
@@ -481,14 +535,14 @@ const AnalysisHistoryPage: React.FC = () => {
                         <Typography variant="body2" color="text.secondary">
                           Arbre ID
                         </Typography>
-                        <Typography variant="body1">{selectedAnalysis.treeId}</Typography>
+                        <Typography variant="body1">{formatValue(selectedAnalysis.treeId)}</Typography>
                       </Grid>
                       <Grid item xs={6}>
                         <Typography variant="body2" color="text.secondary">
                           Type d'arbre
                         </Typography>
                         <Typography variant="body1">
-                          {selectedAnalysis.treeAnalysis.species || 'N/A'}
+                          {formatValue(selectedAnalysis.treeAnalysis?.species)}
                         </Typography>
                       </Grid>
                       <Grid item xs={6}>
@@ -496,19 +550,159 @@ const AnalysisHistoryPage: React.FC = () => {
                           Analyste
                         </Typography>
                         <Typography variant="body1">
-                          {selectedAnalysis.createdBy?.name || 'N/A'}
+                          {formatValue(selectedAnalysis.createdBy?.name)}
                         </Typography>
                       </Grid>
                     </Grid>
                   </Paper>
                 </Grid>
 
-                {selectedAnalysis.diseaseDetection.detected && (
-                  <Grid item xs={12}>
-                    <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-                      Maladies Détectées
-                    </Typography>
-                    {selectedAnalysis.diseaseDetection.diseases.map((disease, index) => (
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Résultats de l'Analyse
+                  </Typography>
+                  <Paper sx={{ p: 2, mt: 1, bgcolor: '#f5f5f5' }}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" color="text.secondary">
+                          Score de santé
+                        </Typography>
+                        <Typography variant="body1">
+                          {formatNumber(selectedHealthScore, '%')}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" color="text.secondary">
+                          Maladies détectées
+                        </Typography>
+                        <Typography variant="body1">
+                          {selectedAnalysis.diseaseDetection?.detected
+                            ? `${selectedDiseases.length} détectée(s)`
+                            : 'Aucune'}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" color="text.secondary">
+                          État de l'arbre
+                        </Typography>
+                        <Typography variant="body1">
+                          {formatValue(selectedAnalysis.treeHealth)}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" color="text.secondary">
+                          Nombre de fruits
+                        </Typography>
+                        <Typography variant="body1">
+                          {formatNumber(selectedAnalysis.fruitCount)}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  </Paper>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Analyse de l'Arbre
+                  </Typography>
+                  <Paper sx={{ p: 2, mt: 1, bgcolor: '#f5f5f5' }}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" color="text.secondary">
+                          Âge estimé
+                        </Typography>
+                        <Typography variant="body1">
+                          {formatNumber(selectedAnalysis.treeAnalysis?.estimatedAge, 'ans')}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" color="text.secondary">
+                          Densité du feuillage
+                        </Typography>
+                        <Typography variant="body1">
+                          {formatNumber(selectedAnalysis.treeAnalysis?.foliageDensity, '%')}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" color="text.secondary">
+                          Intégrité structurelle
+                        </Typography>
+                        <Typography variant="body1">
+                          {formatNumber(selectedAnalysis.treeAnalysis?.structuralIntegrity, '%')}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" color="text.secondary">
+                          Nouvelle croissance
+                        </Typography>
+                        <Typography variant="body1">
+                          {formatBoolean(selectedAnalysis.treeAnalysis?.growthIndicators?.newGrowth)}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" color="text.secondary">
+                          Couleur des feuilles
+                        </Typography>
+                        <Typography variant="body1">
+                          {formatValue(selectedAnalysis.treeAnalysis?.growthIndicators?.leafColor)}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" color="text.secondary">
+                          Santé des branches
+                        </Typography>
+                        <Typography variant="body1">
+                          {formatValue(selectedAnalysis.treeAnalysis?.growthIndicators?.branchHealth)}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  </Paper>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Mesures
+                  </Typography>
+                  <Paper sx={{ p: 2, mt: 1, bgcolor: '#f5f5f5' }}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={4}>
+                        <Typography variant="body2" color="text.secondary">
+                          Hauteur
+                        </Typography>
+                        <Typography variant="body1">
+                          {formatNumber(selectedAnalysis.measurements?.height, 'm')}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={4}>
+                        <Typography variant="body2" color="text.secondary">
+                          Largeur
+                        </Typography>
+                        <Typography variant="body1">
+                          {formatNumber(selectedAnalysis.measurements?.width, 'm')}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={4}>
+                        <Typography variant="body2" color="text.secondary">
+                          Densité
+                        </Typography>
+                        <Typography variant="body1">
+                          {formatNumber(selectedAnalysis.measurements?.density)}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  </Paper>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                    Maladies Détectées
+                  </Typography>
+                  {selectedDiseases.length === 0 ? (
+                    <Paper sx={{ p: 2, bgcolor: '#f5f5f5' }}>
+                      <Typography variant="body2">Aucune maladie détectée</Typography>
+                    </Paper>
+                  ) : (
+                    selectedDiseases.map((disease, index) => (
                       <Paper key={index} sx={{ p: 2, mb: 2, border: '1px solid #e0e0e0' }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                           <Typography variant="h6">{disease.name}</Typography>
@@ -537,9 +731,43 @@ const AnalysisHistoryPage: React.FC = () => {
                           </>
                         )}
                       </Paper>
-                    ))}
-                  </Grid>
-                )}
+                    ))
+                  )}
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Images d'Analyse
+                  </Typography>
+                  <Paper sx={{ p: 2, mt: 1, bgcolor: '#f5f5f5' }}>
+                    {selectedImages.length === 0 ? (
+                      <Typography variant="body2">Non spécifié</Typography>
+                    ) : (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                        {selectedImages.map((image, index) => {
+                          const imageUrl = formatImageUrl(image.url);
+                          return (
+                            <Box key={index} sx={{ textAlign: 'center' }}>
+                              {imageUrl ? (
+                                <Box
+                                  component="img"
+                                  src={imageUrl}
+                                  alt={image.imageType ? `Analyse ${image.imageType}` : 'Image analyse'}
+                                  sx={{ width: 160, height: 120, objectFit: 'cover', borderRadius: 1, mb: 1 }}
+                                />
+                              ) : (
+                                <Typography variant="body2">Image indisponible</Typography>
+                              )}
+                              <Typography variant="caption" color="text.secondary">
+                                {formatValue(image.imageType)}
+                              </Typography>
+                            </Box>
+                          );
+                        })}
+                      </Box>
+                    )}
+                  </Paper>
+                </Grid>
 
                 {selectedAnalysis.notes && (
                   <Grid item xs={12}>

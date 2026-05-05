@@ -306,7 +306,7 @@ const App = () => {
               <Route 
                 path=":id/edit" 
                 element={
-                  <PrivateRoute isAuthenticated={isAuthenticated} requiredRole="admin">
+                  <PrivateRoute isAuthenticated={isAuthenticated}>
                     <TreeDetails />
                   </PrivateRoute>
                 } 

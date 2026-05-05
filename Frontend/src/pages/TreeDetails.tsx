@@ -53,7 +53,7 @@ const TreeDetails = () => {
   const navigate = useNavigate();
   const [tree, setTree] = useState<Tree | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(location.pathname.endsWith('/edit'));
+  const isEditing = location.pathname.endsWith('/edit');
   const [error, setError] = useState<string>('');
   const [userRole, setUserRole] = useState<string>('');
   const [userEmail, setUserEmail] = useState<string>('');
@@ -103,10 +103,16 @@ const TreeDetails = () => {
   }, [fetchTreeDetails]);
 
   const handleTreeUpdated = () => {
-    setIsEditing(false);
     fetchTreeDetails();
     navigate(`/trees/${id}`); // Rediriger vers la vue détails après l'édition
   };
+
+  const handleToggleEdit = useCallback(() => {
+    if (!id) {
+      return;
+    }
+    navigate(isEditing ? `/trees/${id}` : `/trees/${id}/edit`);
+  }, [id, isEditing, navigate]);
 
   const handleArchive = async () => {
     try {
@@ -164,17 +170,66 @@ const TreeDetails = () => {
     }
   };
 
+  const canEdit = tree ? (userRole === 'admin' || userEmail === tree.ownerInfo.email) : false;
+  const canEditTree = canEdit && !tree?.isArchived;
+
   if (loading) return <LinearProgress />;
   if (error) return <Typography color="error">{error}</Typography>;
   if (!tree) return <Typography>Arbre non trouvé</Typography>;
 
-  const canEdit = userRole === 'admin' || userEmail === tree.ownerInfo.email;
+  const formatValue = (value: unknown) => {
+    if (value === null || value === undefined || value === '') {
+      return 'Non spécifié';
+    }
+    if (typeof value === 'number' && Number.isNaN(value)) {
+      return 'Non spécifié';
+    }
+    return String(value);
+  };
+
+  const formatNumberWithUnit = (value: number | null | undefined, unit: string) => {
+    if (value === null || value === undefined || Number.isNaN(value)) {
+      return 'Non spécifié';
+    }
+    return `${value} ${unit}`;
+  };
+
+  const formatDate = (value?: string) => {
+    if (!value) {
+      return 'Non spécifié';
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return 'Non spécifié';
+    }
+    return date.toLocaleDateString();
+  };
+
+  const treeIdLabel = formatValue(tree.treeId);
+  const treeTypeLabel = formatValue(tree.treeType);
+  const statusLabel = formatValue(tree.status);
+  const statusColor = tree.status === 'healthy'
+    ? 'success'
+    : tree.status === 'warning'
+      ? 'warning'
+      : tree.status === 'critical'
+        ? 'error'
+        : 'default';
+  const fruitsPresence = tree.fruits?.present === undefined
+    ? 'Non spécifié'
+    : (tree.fruits.present ? 'Oui' : 'Non');
+  const fruitsQuantity = tree.fruits?.present
+    ? formatNumberWithUnit(tree.fruits.estimatedQuantity, 'fruits')
+    : 'Non spécifié';
+  const fruitsLastAnalysis = formatDate(tree.fruits?.lastAnalysisDate);
+  const latitudeLabel = formatValue(tree.location?.latitude);
+  const longitudeLabel = formatValue(tree.location?.longitude);
 
   return (
     <Container maxWidth="lg">
       <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h4" component="h1">
-          Arbre #{tree.treeId}
+          Arbre #{treeIdLabel}
           {tree.isArchived && (
             <Chip
               label="Archivé"
@@ -183,13 +238,13 @@ const TreeDetails = () => {
             />
           )}
         </Typography>
-        {canEdit && !tree.isArchived && (
+        {canEditTree && (
           <Box>
             <Button
               variant="contained"
               color="primary"
               startIcon={<Edit />}
-              onClick={() => setIsEditing(!isEditing)}
+              onClick={handleToggleEdit}
               sx={{ mr: 1 }}
             >
               {isEditing ? 'Annuler' : 'Modifier'}
@@ -218,7 +273,7 @@ const TreeDetails = () => {
         )}
       </Box>
 
-      {isEditing ? (
+      {isEditing && canEditTree ? (
         <EditTreeForm treeId={id!} onTreeUpdated={handleTreeUpdated} />
       ) : (
         <Grid container spacing={3}>
@@ -231,19 +286,19 @@ const TreeDetails = () => {
               <Grid container spacing={2}>
                 <Grid item xs={6}>
                   <Typography variant="subtitle2">Hauteur</Typography>
-                  <Typography>{tree.measurements?.height ?? 'Non spécifié'} m</Typography>
+                  <Typography>{formatNumberWithUnit(tree.measurements?.height, 'm')}</Typography>
                 </Grid>
                 <Grid item xs={6}>
                   <Typography variant="subtitle2">Largeur</Typography>
-                  <Typography>{tree.measurements?.width ?? 'Non spécifié'} m</Typography>
+                  <Typography>{formatNumberWithUnit(tree.measurements?.width, 'm')}</Typography>
                 </Grid>
                 <Grid item xs={12}>
                   <Typography variant="subtitle2">Forme approximative</Typography>
-                  <Typography>{tree.measurements?.approximateShape ?? 'Non spécifiée'}</Typography>
+                  <Typography>{formatValue(tree.measurements?.approximateShape)}</Typography>
                 </Grid>
                 <Grid item xs={12}>
                   <Typography variant="subtitle2">Dernière mise à jour</Typography>
-                  <Typography>{new Date(tree.lastUpdate).toLocaleDateString()}</Typography>
+                  <Typography>{formatDate(tree.lastUpdate)}</Typography>
                 </Grid>
               </Grid>
             </Paper>
@@ -258,22 +313,16 @@ const TreeDetails = () => {
               <Grid container spacing={2}>
                 <Grid item xs={12}>
                   <Typography variant="subtitle2">Présence de fruits</Typography>
-                  <Typography>{tree.fruits?.present ? 'Oui' : 'Non'}</Typography>
+                  <Typography>{fruitsPresence}</Typography>
                 </Grid>
-                {tree.fruits?.present && (
-                  <Grid item xs={12}>
-                    <Typography variant="subtitle2">Quantité estimée</Typography>
-                    <Typography>{tree.fruits?.estimatedQuantity || 0} fruits</Typography>
-                  </Grid>
-                )}
-                {tree.fruits?.lastAnalysisDate && (
-                  <Grid item xs={12}>
-                    <Typography variant="subtitle2">Dernière analyse</Typography>
-                    <Typography>
-                      {new Date(tree.fruits.lastAnalysisDate).toLocaleDateString()}
-                    </Typography>
-                  </Grid>
-                )}
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2">Quantité estimée</Typography>
+                  <Typography>{fruitsQuantity}</Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2">Dernière analyse</Typography>
+                  <Typography>{fruitsLastAnalysis}</Typography>
+                </Grid>
               </Grid>
             </Paper>
           </Grid>
@@ -287,21 +336,21 @@ const TreeDetails = () => {
               <Grid container spacing={2}>
                 <Grid item xs={6}>
                   <Typography variant="subtitle2">Latitude</Typography>
-                  <Typography>{tree.location.latitude}</Typography>
+                  <Typography>{latitudeLabel}</Typography>
                 </Grid>
                 <Grid item xs={6}>
                   <Typography variant="subtitle2">Longitude</Typography>
-                  <Typography>{tree.location.longitude}</Typography>
+                  <Typography>{longitudeLabel}</Typography>
                 </Grid>
                 <Grid item xs={12}>
                   <Typography variant="subtitle2">Type d'arbre</Typography>
-                  <Typography>{tree.treeType}</Typography>
+                  <Typography>{treeTypeLabel}</Typography>
                 </Grid>
                 <Grid item xs={12}>
                   <Typography variant="subtitle2">Statut</Typography>
                   <Chip 
-                    label={tree.status}
-                    color={tree.status === 'healthy' ? 'success' : tree.status === 'warning' ? 'warning' : 'error'}
+                    label={statusLabel}
+                    color={statusColor}
                   />
                 </Grid>
               </Grid>

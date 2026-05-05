@@ -140,7 +140,6 @@ interface Tree {
   isArchived?: boolean;
   measurements?: {
     height?: number;
-    width?: number;
     approximateShape?: string;
   };
   fruits?: {
@@ -470,7 +469,6 @@ const TreeList = () => {
                 <TableCell sx={{ fontWeight: 700 }}>👤 Propriétaire</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>📊 État</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>📏 Hauteur</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>📐 Largeur</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>🍎 Fruits</TableCell>
                 {userRole === 'admin' && <TableCell sx={{ fontWeight: 700 }}>⚙️ Actions</TableCell>}
               </TableRow>
@@ -550,13 +548,6 @@ const TreeList = () => {
                     </TableCell>
                     
                     <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <SpeedIcon sx={{ color: theme.palette.secondary.main }} />
-                        {tree.measurements?.width || 0}cm
-                      </Box>
-                    </TableCell>
-                    
-                    <TableCell>
                       {tree.fruits?.present ? (
                         <Chip
                           label={`${tree.fruits?.estimatedQuantity || 0} fruits`}
@@ -616,7 +607,7 @@ const TreeList = () => {
                   
                   {/* Section détails étendus */}
                   <TableRow>
-                    <TableCell sx={{ py: 0 }} colSpan={userRole === 'admin' ? 8 : 7}>
+                    <TableCell sx={{ py: 0 }} colSpan={userRole === 'admin' ? 7 : 6}>
                       <Collapse in={expandedTree === tree.treeId} timeout="auto" unmountOnExit>
                         <Box sx={{ py: 3 }}>
                           <HolographicCard sx={{ p: 3 }}>
@@ -721,7 +712,7 @@ const TreeList = () => {
               
               {filteredTrees.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={userRole === 'admin' ? 8 : 7} align="center">
+                  <TableCell colSpan={userRole === 'admin' ? 7 : 6} align="center">
                     <Box sx={{ py: 6, textAlign: 'center' }}>
                       <Avatar sx={{ 
                         width: 80, 

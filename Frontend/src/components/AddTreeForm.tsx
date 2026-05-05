@@ -138,6 +138,11 @@ const AddTreeForm: React.FC<AddTreeFormProps> = ({ onTreeAdded }) => {
               value={formData.treeId}
               onChange={handleChange}
               required
+              helperText="Format: nombre de 3 à 9 chiffres"
+              inputProps={{
+                pattern: "\\d{3,9}",
+                title: "L'ID doit être un nombre de 3 à 9 chiffres"
+              }}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
@@ -190,6 +195,11 @@ const AddTreeForm: React.FC<AddTreeFormProps> = ({ onTreeAdded }) => {
               value={formData.location.latitude}
               onChange={handleChange}
               required
+              inputProps={{
+                min: -90,
+                max: 90,
+                step: "0.000001"
+              }}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
@@ -201,6 +211,11 @@ const AddTreeForm: React.FC<AddTreeFormProps> = ({ onTreeAdded }) => {
               value={formData.location.longitude}
               onChange={handleChange}
               required
+              inputProps={{
+                min: -180,
+                max: 180,
+                step: "0.000001"
+              }}
             />
           </Grid>
         </Grid>

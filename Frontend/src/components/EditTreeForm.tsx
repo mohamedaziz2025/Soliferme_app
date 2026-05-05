@@ -30,7 +30,6 @@ interface TreeData {
   };
   measurements: {
     height: number;
-    width: number;
     approximateShape: string;
   };
   fruits: {
@@ -55,7 +54,6 @@ const EditTreeForm: React.FC<EditTreeFormProps> = ({ treeId, onTreeUpdated }) =>
     },
     measurements: {
       height: 0,
-      width: 0,
       approximateShape: '',
     },
     fruits: {
@@ -97,7 +95,6 @@ const EditTreeForm: React.FC<EditTreeFormProps> = ({ treeId, onTreeUpdated }) =>
         },
         measurements: {
           height: Number(response.data.measurements?.height) || 0,
-          width: Number(response.data.measurements?.width) || 0,
           approximateShape: response.data.measurements?.approximateShape || '',
         },
         fruits: {
@@ -353,21 +350,6 @@ const EditTreeForm: React.FC<EditTreeFormProps> = ({ treeId, onTreeUpdated }) =>
               required
               error={formData.measurements.height < 0}
               helperText={formData.measurements.height < 0 ? 'La hauteur doit être positive' : ''}
-            />
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              label="Largeur (m)"
-              name="measurements.width"
-              type="number"
-              value={formData.measurements.width}
-              onChange={handleInputChange}
-              inputProps={{ min: 0, step: "0.1" }}
-              required
-              error={formData.measurements.width < 0}
-              helperText={formData.measurements.width < 0 ? 'La largeur doit être positive' : ''}
             />
           </Grid>
 
