@@ -213,8 +213,9 @@ class _TreeDetailsScreenState extends State<TreeDetailsScreen> {
 
           final heightText = _formatMeters(measurements['height']);
           final widthText = _formatMeters(measurements['width']);
-          final shapeText = (measurements['approximateShape']?.toString().trim().isNotEmpty ?? false)
-              ? measurements['approximateShape']?.toString()
+            final shapeValue = measurements['approximateShape']?.toString().trim();
+            final shapeText = (shapeValue != null && shapeValue.isNotEmpty)
+              ? shapeValue
               : 'Non specifiee';
 
           final hasFruits = fruits['present'] == true;
