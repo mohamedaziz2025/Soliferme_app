@@ -7,6 +7,7 @@ import '../services/api_service.dart';
 import '../services/api_exception.dart';
 import '../services/permission_service.dart';
 import '../services/tree_service.dart';
+import 'home_screen.dart';
 
 class TreeAnalysisScreen extends StatefulWidget {
   final String? initialTreeId;
@@ -59,6 +60,29 @@ class _TreeAnalysisScreenState extends State<TreeAnalysisScreen> {
     return double.tryParse(value.toString());
   }
 
+  int? _toInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.round();
+    return int.tryParse(value.toString());
+  }
+
+  bool? _toBool(dynamic value) {
+    if (value == null) return null;
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    final normalized = value.toString().toLowerCase().trim();
+    if (normalized == 'true' || normalized == '1' || normalized == 'oui') return true;
+    if (normalized == 'false' || normalized == '0' || normalized == 'non') return false;
+    return null;
+  }
+
+  Map<String, dynamic>? _asMap(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) return Map<String, dynamic>.from(value);
+    return null;
+  }
+
   Map<String, dynamic> _extractAnalysisPayload(Map<String, dynamic> result) {
     final analysis = result['analysis'];
     if (analysis is Map<String, dynamic>) {
@@ -85,6 +109,61 @@ class _TreeAnalysisScreenState extends State<TreeAnalysisScreen> {
     return const {};
   }
 
+  Map<String, dynamic> _extractFruitInfo(Map<String, dynamic> result) {
+    bool? present;
+    int? count;
+    int? minEstimate;
+
+    final tree = _asMap(result['tree']);
+    final fruits = _asMap(tree?['fruits']);
+    if (fruits != null) {
+      present ??= _toBool(fruits['present']);
+      count ??= _toInt(fruits['estimatedQuantity']);
+      minEstimate ??= _toInt(fruits['minimumEstimatedQuantity'] ?? fruits['minEstimatedQuantity']);
+    }
+
+    final analysisRoot = _asMap(result['analysis']);
+    if (analysisRoot != null) {
+      count ??= _toInt(analysisRoot['fruitCount']);
+    }
+
+    final analysis = _extractAnalysisPayload(result);
+    final treeAnalysis = _asMap(analysis['treeAnalysis']);
+    if (treeAnalysis != null) {
+      present ??= _toBool(
+        treeAnalysis['hasFruits'] ??
+        treeAnalysis['fruitsPresent'] ??
+        treeAnalysis['fruitPresence'] ??
+        treeAnalysis['fruits_detected'],
+      );
+      count ??= _toInt(
+        treeAnalysis['fruitCount'] ??
+        treeAnalysis['fruitsCount'] ??
+        treeAnalysis['estimatedFruitCount'] ??
+        treeAnalysis['estimatedQuantity'],
+      );
+      minEstimate ??= _toInt(
+        treeAnalysis['minFruitCount'] ??
+        treeAnalysis['minEstimatedFruitCount'] ??
+        treeAnalysis['minEstimate'],
+      );
+    }
+
+    if (present == null && count != null) {
+      present = count > 0;
+    }
+
+    if (minEstimate == null && count != null) {
+      minEstimate = count;
+    }
+
+    return {
+      'present': present,
+      'count': count,
+      'minEstimate': minEstimate,
+    };
+  }
+
   @override
   void initState() {
     super.initState();
@@ -96,7 +175,11 @@ class _TreeAnalysisScreenState extends State<TreeAnalysisScreen> {
       if (!mounted) return;
 
       if (mounted && widget.initialAnalysisResult != null) {
-        _showAnalysisResults(widget.initialAnalysisResult!);
+        final goToDashboard = await _showAnalysisResults(widget.initialAnalysisResult!);
+        if (!mounted) return;
+        if (goToDashboard) {
+          await _navigateToDashboard();
+        }
       } else if (widget.autoStartCamera && !_cameraAutoStarted) {
         _cameraAutoStarted = true;
         await _capturePhoto();
@@ -289,7 +372,11 @@ class _TreeAnalysisScreenState extends State<TreeAnalysisScreen> {
       );
 
       if (mounted) {
-        _showAnalysisResults(result);
+        final goToDashboard = await _showAnalysisResults(result);
+        if (!mounted) return;
+        if (goToDashboard) {
+          await _navigateToDashboard();
+        }
       }
     } catch (e) {
       final userMessage = e is ApiException
@@ -311,8 +398,8 @@ class _TreeAnalysisScreenState extends State<TreeAnalysisScreen> {
     }
   }
 
-  void _showAnalysisResults(Map<String, dynamic> result) {
-    showModalBottomSheet(
+  Future<bool> _showAnalysisResults(Map<String, dynamic> result) async {
+    final goToDashboard = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -379,7 +466,7 @@ class _TreeAnalysisScreenState extends State<TreeAnalysisScreen> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => Navigator.pop(context, true),
                   ),
                 ],
               ),
@@ -403,6 +490,8 @@ class _TreeAnalysisScreenState extends State<TreeAnalysisScreen> {
                     const SizedBox(height: 20),
                     _buildDiseaseSection(result),
                     const SizedBox(height: 20),
+                    _buildFruitSection(result),
+                    const SizedBox(height: 20),
                     _buildTreeInfoSection(result),
                   ],
                 ),
@@ -415,13 +504,26 @@ class _TreeAnalysisScreenState extends State<TreeAnalysisScreen> {
               child: Row(
                 children: [
                   Expanded(
-                    child: ElevatedButton.icon(
+                    child: OutlinedButton.icon(
                       onPressed: () {
-                        Navigator.pop(context);
                         _resetForm();
+                        Navigator.pop(context, false);
                       },
                       icon: const Icon(Icons.add_a_photo),
                       label: const Text('Nouvelle Analyse'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF00E676),
+                        side: const BorderSide(color: Color(0xFF00E676)),
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => Navigator.pop(context, true),
+                      icon: const Icon(Icons.dashboard),
+                      label: const Text('Dashboard'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF00E676),
                         foregroundColor: Colors.black,
@@ -436,6 +538,7 @@ class _TreeAnalysisScreenState extends State<TreeAnalysisScreen> {
         ),
       ),
     );
+    return goToDashboard ?? true;
   }
 
   Widget _buildResultSection(
@@ -636,6 +739,52 @@ class _TreeAnalysisScreenState extends State<TreeAnalysisScreen> {
     );
   }
 
+  Widget _buildFruitSection(Map<String, dynamic> result) {
+    final fruitInfo = _extractFruitInfo(result);
+    final present = fruitInfo['present'] as bool?;
+    final count = fruitInfo['count'] as int?;
+    final minEstimate = fruitInfo['minEstimate'] as int?;
+
+    String presenceLabel = 'Inconnu';
+    if (present == true) {
+      presenceLabel = 'Oui';
+    } else if (present == false) {
+      presenceLabel = 'Non';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF262626),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: const Color(0xFFFFB74D).withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.local_florist, color: Color(0xFFFFB74D), size: 24),
+              SizedBox(width: 10),
+              Text(
+                'Fruits detectes',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildInfoRow('Presence de fruits', presenceLabel),
+          _buildInfoRow('Nombre de fruits', count?.toString() ?? 'N/A'),
+          _buildInfoRow('Estimation minimale', minEstimate?.toString() ?? 'N/A'),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTreeInfoSection(Map<String, dynamic> result) {
     final treeRaw = result['tree'];
     final tree = treeRaw is Map<String, dynamic>
@@ -709,6 +858,14 @@ class _TreeAnalysisScreenState extends State<TreeAnalysisScreen> {
       _capturedImage = null;
       _notesController.clear();
     });
+  }
+
+  Future<void> _navigateToDashboard() async {
+    if (!mounted) return;
+    await Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const HomeScreen()),
+      (route) => false,
+    );
   }
 
   @override

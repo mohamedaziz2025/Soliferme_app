@@ -31,6 +31,40 @@ class _TreeDetailsScreenState extends State<TreeDetailsScreen> {
     });
   }
 
+  double? _toDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString());
+  }
+
+  int? _toInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.round();
+    return int.tryParse(value.toString());
+  }
+
+  String _formatMeters(dynamic value) {
+    final numeric = _toDouble(value);
+    if (numeric == null) return 'N/A';
+    return '${numeric.toStringAsFixed(2)} m';
+  }
+
+  String _formatDate(dynamic value) {
+    if (value == null) return 'N/A';
+    DateTime? date;
+    if (value is DateTime) {
+      date = value;
+    } else {
+      date = DateTime.tryParse(value.toString());
+    }
+    if (date == null) return 'N/A';
+    final local = date.toLocal();
+    final day = local.day.toString().padLeft(2, '0');
+    final month = local.month.toString().padLeft(2, '0');
+    return '$day/$month/${local.year}';
+  }
+
   Future<void> _archiveTree() async {
     try {
       setState(() => _isLoading = true);
@@ -171,7 +205,26 @@ class _TreeDetailsScreenState extends State<TreeDetailsScreen> {
           final isAdmin = Provider.of<AuthService>(context).isAdmin;
           final canEdit = isAdmin || ownerInfo['email'] == userEmail;
 
+          final measurements = treeData['measurements'] as Map<String, dynamic>? ?? {};
+          final fruits = treeData['fruits'] as Map<String, dynamic>? ?? {};
+          final location = treeData['location'] as Map<String, dynamic>? ?? {};
+          final status = treeData['status']?.toString() ?? 'unknown';
+          final statusColor = _getStatusColor(status);
+
+          final heightText = _formatMeters(measurements['height']);
+          final widthText = _formatMeters(measurements['width']);
+          final shapeText = (measurements['approximateShape']?.toString().trim().isNotEmpty ?? false)
+              ? measurements['approximateShape']?.toString()
+              : 'Non specifiee';
+
+          final hasFruits = fruits['present'] == true;
+          final fruitCount = _toInt(fruits['estimatedQuantity']) ?? 0;
+          final fruitCountText = hasFruits ? fruitCount.toString() : '0';
+          final lastFruitAnalysis = _formatDate(fruits['lastAnalysisDate']);
+          final lastUpdate = _formatDate(treeData['lastUpdate']);
+
           return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -197,6 +250,60 @@ class _TreeDetailsScreenState extends State<TreeDetailsScreen> {
                       ],
                     ),
                   ),
+                GlassmorphismContainer(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(Icons.forest, color: statusColor, size: 26),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              treeData['treeType']?.toString() ?? 'Type inconnu',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'ID: ${treeData['treeId']}',
+                              style: TextStyle(color: Colors.white.withOpacity(0.7)),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Derniere mise a jour: $lastUpdate',
+                              style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          status,
+                          style: TextStyle(color: statusColor, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
 
                 GlassmorphismContainer(
                   padding: const EdgeInsets.all(16),
@@ -204,7 +311,38 @@ class _TreeDetailsScreenState extends State<TreeDetailsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Informations du propriétaire',
+                        'Resume',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildMiniStat('Hauteur', heightText, Icons.height),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _buildMiniStat('Largeur', widthText, Icons.width_normal),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _buildMiniStat('Fruits', fruitCountText, Icons.apple),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                GlassmorphismContainer(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Informations du proprietaire',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
                       ),
                       const SizedBox(height: 16),
@@ -228,17 +366,17 @@ class _TreeDetailsScreenState extends State<TreeDetailsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Détails de l\'arbre',
+                        'Mesures et forme',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
                       ListTile(
                         leading: const Icon(Icons.height, color: Colors.white70),
                         title: const Text('Hauteur', style: TextStyle(color: Colors.white)),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('${treeData['measurements']?['height'] ?? 0} m', style: const TextStyle(color: Colors.white)),
+                            Text(heightText, style: const TextStyle(color: Colors.white)),
                             IconButton(
                               tooltip: 'Mesure AR',
                               icon: const Icon(Icons.straighten, color: Colors.white),
@@ -291,12 +429,11 @@ class _TreeDetailsScreenState extends State<TreeDetailsScreen> {
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('${treeData['measurements']?['width'] ?? 0} m', style: const TextStyle(color: Colors.white)),
+                            Text(widthText, style: const TextStyle(color: Colors.white)),
                             IconButton(
                               tooltip: 'Mesure AR',
                               icon: const Icon(Icons.straighten, color: Colors.white),
                               onPressed: () async {
-                                // reuse AR screen to compute width if needed
                                 final result = await Navigator.push<double?>(
                                   context,
                                   MaterialPageRoute(
@@ -339,15 +476,60 @@ class _TreeDetailsScreenState extends State<TreeDetailsScreen> {
                           ],
                         ),
                       ),
-                      ListTile(
-                        leading: const Icon(Icons.monitor_heart_outlined, color: Colors.white70),
-                        title: const Text('État', style: TextStyle(color: Colors.white)),
-                        trailing: Chip(
-                          label: Text(treeData['status'] ?? 'unknown'),
-                          backgroundColor: _getStatusColor(treeData['status']),
-                        ),
+                      const SizedBox(height: 4),
+                      _buildInfoRow('Forme approximative', shapeText),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                GlassmorphismContainer(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Fruits',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
                       ),
-                      if (treeData['images'] != null && (treeData['images'] as List).isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      _buildInfoRow('Presence', hasFruits ? 'Oui' : 'Non'),
+                      _buildInfoRow('Quantite estimee', fruitCountText),
+                      _buildInfoRow('Derniere analyse', lastFruitAnalysis),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                GlassmorphismContainer(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Localisation',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildInfoRow('Latitude', _toDouble(location['latitude'])?.toStringAsFixed(6) ?? 'N/A'),
+                      _buildInfoRow('Longitude', _toDouble(location['longitude'])?.toStringAsFixed(6) ?? 'N/A'),
+                    ],
+                  ),
+                ),
+
+                if (treeData['images'] != null && (treeData['images'] as List).isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  GlassmorphismContainer(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Photos',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
+                        ),
                         const SizedBox(height: 12),
                         SizedBox(
                           height: 120,
@@ -378,9 +560,9 @@ class _TreeDetailsScreenState extends State<TreeDetailsScreen> {
                           ),
                         ),
                       ],
-                    ],
+                    ),
                   ),
-                ),
+                ],
 
                 if (canEdit && !isArchived) ...[
                   const SizedBox(height: 16),
@@ -419,6 +601,58 @@ class _TreeDetailsScreenState extends State<TreeDetailsScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.6),
+              fontSize: 14,
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMiniStat(String label, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.12)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 20, color: Colors.white.withOpacity(0.8)),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12),
+          ),
+        ],
       ),
     );
   }

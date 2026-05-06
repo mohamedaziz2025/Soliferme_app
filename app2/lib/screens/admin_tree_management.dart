@@ -58,24 +58,91 @@ class _AdminTreeManagementState extends State<AdminTreeManagement> {
     if (_filteredTrees.length == 1) {
       selectedTreeId = _filteredTrees.first['treeId']?.toString();
     } else {
+      final baseTrees = List<Map<String, dynamic>>.from(_filteredTrees);
+      String modalSearchQuery = '';
+      final TextEditingController modalSearchController = TextEditingController();
+
       if (!mounted) return;
       selectedTreeId = await showModalBottomSheet<String>(
         context: context,
-        builder: (context) => SafeArea(
-          child: ListView.builder(
-            itemCount: _filteredTrees.length,
-            itemBuilder: (context, index) {
-              final tree = _filteredTrees[index];
-              final treeType = tree['treeType']?.toString() ?? 'Arbre';
-              final treeId = tree['treeId']?.toString() ?? '';
-              return ListTile(
-                leading: const Icon(Icons.forest),
-                title: Text(treeType),
-                subtitle: Text(treeId),
-                onTap: () => Navigator.pop(context, treeId),
-              );
-            },
-          ),
+        isScrollControlled: true,
+        builder: (context) => StatefulBuilder(
+          builder: (context, setModalState) {
+            final filteredTrees = baseTrees.where((tree) {
+              final treeType = tree['treeType']?.toString().toLowerCase() ?? '';
+              final treeId = tree['treeId']?.toString().toLowerCase() ?? '';
+              final ownerEmail = tree['ownerInfo']?['email']?.toString().toLowerCase() ?? '';
+              final query = modalSearchQuery.toLowerCase();
+              return treeType.contains(query) || treeId.contains(query) || ownerEmail.contains(query);
+            }).toList();
+
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+                child: SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.7,
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                        child: TextField(
+                          controller: modalSearchController,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            hintText: 'Rechercher un arbre... ',
+                            hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
+                            prefixIcon: Icon(Icons.search, color: Colors.white.withOpacity(0.7)),
+                            filled: true,
+                            fillColor: Colors.white.withOpacity(0.08),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: const BorderSide(color: Color(0xFF00E676)),
+                            ),
+                          ),
+                          onChanged: (value) {
+                            setModalState(() {
+                              modalSearchQuery = value;
+                            });
+                          },
+                        ),
+                      ),
+                      Expanded(
+                        child: filteredTrees.isEmpty
+                            ? Center(
+                                child: Text(
+                                  'Aucun arbre trouve',
+                                  style: TextStyle(color: Colors.white.withOpacity(0.6)),
+                                ),
+                              )
+                            : ListView.builder(
+                                itemCount: filteredTrees.length,
+                                itemBuilder: (context, index) {
+                                  final tree = filteredTrees[index];
+                                  final treeType = tree['treeType']?.toString() ?? 'Arbre';
+                                  final treeId = tree['treeId']?.toString() ?? '';
+                                  return ListTile(
+                                    leading: const Icon(Icons.forest),
+                                    title: Text(treeType),
+                                    subtitle: Text(treeId),
+                                    onTap: () => Navigator.pop(context, treeId),
+                                  );
+                                },
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       );
     }
@@ -88,6 +155,13 @@ class _AdminTreeManagementState extends State<AdminTreeManagement> {
         builder: (_) => ARMeasurementScreen(treeId: selectedTreeId!),
       ),
     );
+  }
+
+  Future<void> _openAddTree() async {
+    final result = await Navigator.pushNamed(context, '/admin/add-tree');
+    if (result == true) {
+      _loadTrees();
+    }
   }
 
   List<Map<String, dynamic>> get _filteredTrees {
@@ -123,14 +197,31 @@ class _AdminTreeManagementState extends State<AdminTreeManagement> {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      OutlinedButton.icon(
-                        onPressed: _openArProcess,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF00E676),
-                          side: const BorderSide(color: Color(0xFF00E676)),
+                      Flexible(
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: _openArProcess,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF00E676),
+                                side: const BorderSide(color: Color(0xFF00E676)),
+                              ),
+                              icon: const Icon(Icons.settings_suggest),
+                              label: const Text('Process'),
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: _openAddTree,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF00E676),
+                                foregroundColor: Colors.black,
+                              ),
+                              icon: const Icon(Icons.add),
+                              label: const Text('Ajouter un arbre'),
+                            ),
+                          ],
                         ),
-                        icon: const Icon(Icons.settings_suggest),
-                        label: const Text('Process'),
                       ),
                     ],
                   ),
@@ -219,12 +310,7 @@ class _AdminTreeManagementState extends State<AdminTreeManagement> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final result = await Navigator.pushNamed(context, '/admin/add-tree');
-          if (result == true) {
-            _loadTrees();
-          }
-        },
+        onPressed: _openAddTree,
         backgroundColor: const Color(0xFF00E676),
         foregroundColor: Colors.black,
         icon: const Icon(Icons.add),
