@@ -39,7 +39,7 @@ jobs:
 
       - name: Install Backend Dependencies
         working-directory: ./Backend
-        run: npm ci
+        run: npm ci --legacy-peer-deps 
 
       - name: Run Backend Linter
         working-directory: ./Backend
@@ -53,13 +53,11 @@ jobs:
           NODE_ENV: test
 
       - name: Build Backend Docker Image
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v5
         with:
           context: ./Backend
           push: false
           tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/fruitytrack-backend:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
   # Frontend Tests
   frontend-test:
@@ -78,7 +76,7 @@ jobs:
 
       - name: Install Frontend Dependencies
         working-directory: ./Frontend
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: Run Frontend Linter
         working-directory: ./Frontend
@@ -98,13 +96,11 @@ jobs:
           CI: true
 
       - name: Build Frontend Docker Image
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v5
         with:
           context: ./Frontend
           push: false
           tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/fruitytrack-frontend:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
   # AI Service Tests
   ai-service-test:
@@ -129,14 +125,12 @@ jobs:
         run: python -m pytest tests/ --if-exists || echo "No tests found"
 
       - name: Build AI Docker Image
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v5
         with:
           context: ./Backend
-          dockerfile: Backend/Dockerfile
+          file: ./Backend/Dockerfile
           push: false
           tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/fruitytrack-ai:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
   # Flutter Mobile Build Check
   flutter-build:
