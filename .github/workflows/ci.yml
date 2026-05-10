@@ -53,7 +53,7 @@ jobs:
           NODE_ENV: test
 
       - name: Build Backend Docker Image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v3
         with:
           context: ./Backend
           push: false
@@ -98,7 +98,7 @@ jobs:
           CI: true
 
       - name: Build Frontend Docker Image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v3
         with:
           context: ./Frontend
           push: false
@@ -129,7 +129,7 @@ jobs:
         run: python -m pytest tests/ --if-exists || echo "No tests found"
 
       - name: Build AI Docker Image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v3
         with:
           context: ./Backend
           dockerfile: Backend/Dockerfile
