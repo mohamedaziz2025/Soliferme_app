@@ -1,0 +1,96 @@
+name: Release - Version & Tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 1.0.0)'
+        required: true
+        type: string
+      release-notes:
+        description: 'Release notes'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  packages: read
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate version format
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          if ! [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Invalid version format. Expected semantic versioning (e.g., 1.0.0)"
+            exit 1
+          fi
+          echo "✅ Version format valid: $VERSION"
+
+      - name: Create git tag
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag -a v${{ github.event.inputs.version }} -m "Release v${{ github.event.inputs.version }}"
+          git push origin v${{ github.event.inputs.version }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ github.event.inputs.version }}
+          name: Release v${{ github.event.inputs.version }}
+          body: |
+            # FruityTrack v${{ github.event.inputs.version }}
+            
+            ${{ github.event.inputs.release-notes || 'No release notes provided' }}
+            
+            ## Docker Images
+            - Backend: `ghcr.io/${{ github.repository_owner }}/fruitytrack-backend:v${{ github.event.inputs.version }}`
+            - Frontend: `ghcr.io/${{ github.repository_owner }}/fruitytrack-frontend:v${{ github.event.inputs.version }}`
+            - AI Service: `ghcr.io/${{ github.repository_owner }}/fruitytrack-ai:v${{ github.event.inputs.version }}`
+            
+            ## Deployment
+            Run the following to deploy this version:
+            ```bash
+            kubectl set image deployment/fruitytrack-backend fruitytrack-backend=ghcr.io/${{ github.repository_owner }}/fruitytrack-backend:v${{ github.event.inputs.version }} -n fruitytrack-prod
+            kubectl set image deployment/fruitytrack-frontend fruitytrack-frontend=ghcr.io/${{ github.repository_owner }}/fruitytrack-frontend:v${{ github.event.inputs.version }} -n fruitytrack-prod
+            kubectl set image deployment/fruitytrack-ai fruitytrack-ai=ghcr.io/${{ github.repository_owner }}/fruitytrack-ai:v${{ github.event.inputs.version }} -n fruitytrack-prod
+            ```
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update version files
+        run: |
+          # Update version in pubspec.yaml
+          sed -i "s/version: .*/version: ${{ github.event.inputs.version }}/" app2/pubspec.yaml
+          
+          # Update version in Backend package.json
+          npm version ${{ github.event.inputs.version }} --prefix Backend --no-git-tag-version || true
+          
+          # Update version in Frontend package.json
+          npm version ${{ github.event.inputs.version }} --prefix Frontend --no-git-tag-version || true
+
+      - name: Commit version updates
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add -A
+          git commit -m "chore: bump version to ${{ github.event.inputs.version }}" || echo "No changes to commit"
+          git push origin ${{ github.ref }}
+
+      - name: Notify release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            console.log('✅ Release v${{ github.event.inputs.version }} created successfully');
+            console.log('Docker images are being built and pushed...');

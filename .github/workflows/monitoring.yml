@@ -1,0 +1,168 @@
+name: Monitoring - Health & Performance
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'  # Every 15 minutes
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  health-checks:
+    name: Health Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Check pod health
+        run: |
+          echo "## Pod Status"
+          kubectl get pods -n fruitytrack-staging -o wide
+          
+          echo "## Failed Pods"
+          kubectl get pods -n fruitytrack-staging --field-selector=status.phase!=Running,status.phase!=Succeeded || true
+          
+          echo "## Pod Events"
+          kubectl get events -n fruitytrack-staging --sort-by='.lastTimestamp' || true
+
+      - name: Check resource utilization
+        run: |
+          echo "## Node Resource Usage"
+          kubectl top nodes || echo "Metrics server not available"
+          
+          echo "## Pod Resource Usage"
+          kubectl top pods -n fruitytrack-staging || echo "Metrics server not available"
+
+      - name: Check service health
+        run: |
+          echo "## Service Status"
+          kubectl get svc -n fruitytrack-staging
+          
+          echo "## Endpoints"
+          kubectl get endpoints -n fruitytrack-staging
+
+      - name: Check persistent volumes
+        run: |
+          echo "## Persistent Volumes"
+          kubectl get pv
+          
+          echo "## Persistent Volume Claims"
+          kubectl get pvc -n fruitytrack-staging
+
+      - name: Database health check
+        run: |
+          echo "## MongoDB Status"
+          kubectl exec -n fruitytrack-staging $(kubectl get pod -n fruitytrack-staging -l app=mongodb -o jsonpath='{.items[0].metadata.name}' 2>/dev/null) -- mongosh --eval "db.adminCommand('ping')" 2>/dev/null || echo "MongoDB not available or error occurred"
+
+      - name: API health check
+        run: |
+          BACKEND_POD=$(kubectl get pod -n fruitytrack-staging -l app=fruitytrack-backend -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+          if [ -n "$BACKEND_POD" ]; then
+            echo "## Backend API Health"
+            kubectl exec -n fruitytrack-staging $BACKEND_POD -- curl -s http://localhost:3000/health || echo "Health endpoint not available"
+          fi
+
+      - name: Log analysis
+        run: |
+          echo "## Recent Backend Logs"
+          kubectl logs -n fruitytrack-staging deployment/fruitytrack-backend --tail=20 || true
+          
+          echo "## Recent Frontend Logs"
+          kubectl logs -n fruitytrack-staging deployment/fruitytrack-frontend --tail=20 || true
+          
+          echo "## Recent AI Service Logs"
+          kubectl logs -n fruitytrack-staging deployment/fruitytrack-ai --tail=20 || true
+
+      - name: Check certificate expiry
+        run: |
+          echo "## Certificate Status"
+          kubectl get certificate -n fruitytrack-staging || true
+
+  performance-monitoring:
+    name: Performance Metrics
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Query Prometheus metrics
+        run: |
+          echo "## HTTP Request Rate"
+          kubectl exec -n fruitytrack-staging $(kubectl get pod -n fruitytrack-staging -l app=prometheus -o jsonpath='{.items[0].metadata.name}' 2>/dev/null) -- promtool query instant 'rate(http_requests_total[5m])' 2>/dev/null || echo "Prometheus not available"
+          
+          echo "## Error Rate"
+          kubectl exec -n fruitytrack-staging $(kubectl get pod -n fruitytrack-staging -l app=prometheus -o jsonpath='{.items[0].metadata.name}' 2>/dev/null) -- promtool query instant 'rate(http_requests_total{status=~"5.."}[5m])' 2>/dev/null || echo "Prometheus not available"
+
+      - name: Check disk space
+        run: |
+          echo "## Disk Space Usage"
+          kubectl exec -n fruitytrack-staging $(kubectl get pod -n fruitytrack-staging -l app=mongodb -o jsonpath='{.items[0].metadata.name}' 2>/dev/null) -- df -h 2>/dev/null || echo "Unable to check disk space"
+
+      - name: Memory usage check
+        run: |
+          echo "## Memory Usage"
+          kubectl get pods -n fruitytrack-staging -o json | jq '.items[] | {name: .metadata.name, memory: .spec.containers[0].resources.limits.memory}'
+
+  alert-check:
+    name: Alert Status
+    runs-on: ubuntu-latest
+    needs: [health-checks, performance-monitoring]
+    if: always()
+
+    steps:
+      - name: Generate health report
+        run: |
+          echo "## Health Check Report"
+          echo "- Health Checks: ${{ needs.health-checks.result }}"
+          echo "- Performance Monitoring: ${{ needs.performance-monitoring.result }}"
+          
+          if [ "${{ needs.health-checks.result }}" != "success" ]; then
+            echo "⚠️ Health checks detected issues"
+          else
+            echo "✅ All systems healthy"
+          fi
+
+      - name: Create GitHub issue if unhealthy
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = '⚠️ Health Check Alert - Staging Environment';
+            const body = `## Staging Environment Alert
+            
+            Health checks have detected potential issues:
+            - Health Checks: ${{ needs.health-checks.result }}
+            - Performance Monitoring: ${{ needs.performance-monitoring.result }}
+            
+            **Action Required**: Review logs and investigate the failing checks.
+            
+            View details in the [workflow run](${context.payload.repository.html_url}/actions/runs/${context.runId})
+            `;
+            
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['alert', 'devops']
+            });

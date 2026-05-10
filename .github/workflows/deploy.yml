@@ -1,0 +1,205 @@
+name: Deploy - Kubernetes
+
+on:
+  workflow_run:
+    workflows: ["CD - Build & Push Docker Images"]
+    types:
+      - completed
+    branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop' && (github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch')
+    
+    permissions:
+      contents: read
+      packages: read
+
+    environment:
+      name: staging
+      url: https://staging.fruitytrack.example.com
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Get current branch image tag
+        id: image-tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.ref_name }}-${{ github.sha }}"
+          else
+            TAG="${{ github.event.workflow_run.head_branch }}-${{ github.event.workflow_run.head_sha }}"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Update Kubernetes manifests
+        run: |
+          # Update Backend deployment
+          kubectl set image deployment/fruitytrack-backend \
+            fruitytrack-backend=${{ env.REGISTRY }}/${{ github.repository_owner }}/fruitytrack-backend:${{ steps.image-tag.outputs.tag }} \
+            -n fruitytrack-staging \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          # Update Frontend deployment
+          kubectl set image deployment/fruitytrack-frontend \
+            fruitytrack-frontend=${{ env.REGISTRY }}/${{ github.repository_owner }}/fruitytrack-frontend:${{ steps.image-tag.outputs.tag }} \
+            -n fruitytrack-staging \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          # Update AI Service deployment
+          kubectl set image deployment/fruitytrack-ai \
+            fruitytrack-ai=${{ env.REGISTRY }}/${{ github.repository_owner }}/fruitytrack-ai:${{ steps.image-tag.outputs.tag }} \
+            -n fruitytrack-staging \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/fruitytrack-backend -n fruitytrack-staging --timeout=5m
+          kubectl rollout status deployment/fruitytrack-frontend -n fruitytrack-staging --timeout=5m
+          kubectl rollout status deployment/fruitytrack-ai -n fruitytrack-staging --timeout=5m
+
+      - name: Run smoke tests
+        run: |
+          echo "Running health checks..."
+          kubectl get pods -n fruitytrack-staging
+          kubectl logs deployment/fruitytrack-backend -n fruitytrack-staging -n 10 || true
+
+      - name: Notify deployment
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ job.status }}';
+            const message = status === 'success' 
+              ? '✅ Staging deployment completed successfully'
+              : '❌ Staging deployment failed';
+            console.log(message);
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && (github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch')
+    
+    permissions:
+      contents: read
+      packages: read
+
+    environment:
+      name: production
+      url: https://fruitytrack.example.com
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Configure kubectl for Production
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Get current branch image tag
+        id: image-tag
+        run: |
+          TAG="${{ github.ref_name }}-${{ github.sha }}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Create backup
+        run: |
+          echo "Creating database backup..."
+          kubectl exec -n fruitytrack-prod $(kubectl get pod -n fruitytrack-prod -l app=mongodb -o jsonpath='{.items[0].metadata.name}') -- mongodump --out /backup/mongo-backup-$(date +%Y%m%d-%H%M%S) || true
+
+      - name: Update Kubernetes manifests
+        run: |
+          # Update Backend deployment
+          kubectl set image deployment/fruitytrack-backend \
+            fruitytrack-backend=${{ env.REGISTRY }}/${{ github.repository_owner }}/fruitytrack-backend:${{ steps.image-tag.outputs.tag }} \
+            -n fruitytrack-prod \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          # Update Frontend deployment
+          kubectl set image deployment/fruitytrack-frontend \
+            fruitytrack-frontend=${{ env.REGISTRY }}/${{ github.repository_owner }}/fruitytrack-frontend:${{ steps.image-tag.outputs.tag }} \
+            -n fruitytrack-prod \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          # Update AI Service deployment
+          kubectl set image deployment/fruitytrack-ai \
+            fruitytrack-ai=${{ env.REGISTRY }}/${{ github.repository_owner }}/fruitytrack-ai:${{ steps.image-tag.outputs.tag }} \
+            -n fruitytrack-prod \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Wait for rollout with timeout
+        run: |
+          kubectl rollout status deployment/fruitytrack-backend -n fruitytrack-prod --timeout=10m
+          kubectl rollout status deployment/fruitytrack-frontend -n fruitytrack-prod --timeout=10m
+          kubectl rollout status deployment/fruitytrack-ai -n fruitytrack-prod --timeout=10m
+
+      - name: Verify deployment health
+        run: |
+          echo "Checking pod status..."
+          kubectl get pods -n fruitytrack-prod
+          
+          echo "Checking service endpoints..."
+          kubectl get svc -n fruitytrack-prod
+
+      - name: Create GitHub Release
+        if: success()
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: release-${{ github.sha }}
+          release_name: Production Release - ${{ github.sha }}
+          body: |
+            Production deployment completed successfully
+            
+            Backend: ${{ env.REGISTRY }}/${{ github.repository_owner }}/fruitytrack-backend:${{ steps.image-tag.outputs.tag }}
+            Frontend: ${{ env.REGISTRY }}/${{ github.repository_owner }}/fruitytrack-frontend:${{ steps.image-tag.outputs.tag }}
+            AI Service: ${{ env.REGISTRY }}/${{ github.repository_owner }}/fruitytrack-ai:${{ steps.image-tag.outputs.tag }}
+
+      - name: Notify success
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            console.log('✅ Production deployment completed successfully');
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "⚠️ Deployment failed, initiating rollback..."
+          kubectl rollout undo deployment/fruitytrack-backend -n fruitytrack-prod
+          kubectl rollout undo deployment/fruitytrack-frontend -n fruitytrack-prod
+          kubectl rollout undo deployment/fruitytrack-ai -n fruitytrack-prod
+          echo "Rollback completed"

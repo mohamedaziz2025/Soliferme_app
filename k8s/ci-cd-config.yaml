@@ -1,0 +1,159 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: fruitytrack-staging
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: fruitytrack-prod
+---
+# ConfigMap for environment configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fruitytrack-config
+  namespace: fruitytrack-staging
+data:
+  NODE_ENV: "development"
+  LOG_LEVEL: "debug"
+  CORS_ORIGIN: "http://localhost:3001"
+  KAFKA_BROKERS: "kafka:9092"
+  MONGODB_URI: "mongodb://mongodb:27017/fruitytrack"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fruitytrack-config
+  namespace: fruitytrack-prod
+data:
+  NODE_ENV: "production"
+  LOG_LEVEL: "info"
+  CORS_ORIGIN: "https://fruitytrack.example.com"
+  KAFKA_BROKERS: "kafka.fruitytrack.example.com:9092"
+  MONGODB_URI: "mongodb://mongodb.fruitytrack.example.com:27017/fruitytrack"
+---
+# Secret template - create these in each environment
+apiVersion: v1
+kind: Secret
+metadata:
+  name: fruitytrack-secrets
+  namespace: fruitytrack-staging
+type: Opaque
+stringData:
+  JWT_SECRET: "your_jwt_secret_key_staging"
+  MONGODB_PASSWORD: "staging_password"
+  SMTP_PASSWORD: "smtp_app_password"
+  AWS_SECRET_ACCESS_KEY: "aws_secret"
+---
+# Image Pull Secret for GitHub Container Registry
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ghcr-secret
+  namespace: fruitytrack-staging
+type: kubernetes.io/dockercfg
+data:
+  .dockercfg: eyJnaGNyLmlvIjp7ImF1dGgiOiJCYXNlNjRFbmNvZGVkVmFsdWVIZXJlIn19
+---
+# Storage Classes (if using persistent volumes)
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: fast-storage
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: gp3
+  iops: "3000"
+  throughput: "125"
+allowVolumeExpansion: true
+---
+# Network Policy for security
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: fruitytrack-network-policy
+  namespace: fruitytrack-prod
+spec:
+  podSelector:
+    matchLabels:
+      app: fruitytrack
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 3000
+        - protocol: TCP
+          port: 80
+        - protocol: TCP
+          port: 443
+  egress:
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443
+    - to:
+        - podSelector:
+            matchLabels:
+              app: mongodb
+      ports:
+        - protocol: TCP
+          port: 27017
+    - to:
+        - podSelector:
+            matchLabels:
+              app: kafka
+      ports:
+        - protocol: TCP
+          port: 9092
+---
+# Resource Quota
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: fruitytrack-quota
+  namespace: fruitytrack-prod
+spec:
+  hard:
+    requests.cpu: "10"
+    requests.memory: "20Gi"
+    limits.cpu: "20"
+    limits.memory: "40Gi"
+    pods: "50"
+---
+# Pod Security Policy
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: fruitytrack-psp
+spec:
+  privileged: false
+  allowPrivilegeEscalation: false
+  requiredDropCapabilities:
+    - ALL
+  volumes:
+    - 'configMap'
+    - 'emptyDir'
+    - 'projected'
+    - 'secret'
+    - 'downwardAPI'
+    - 'persistentVolumeClaim'
+  hostNetwork: false
+  hostIPC: false
+  hostPID: false
+  runAsUser:
+    rule: 'MustRunAsNonRoot'
+  seLinux:
+    rule: 'MustRunAs'
+    seLinuxOptions:
+      level: "s0:c123,c456"
+  fsGroup:
+    rule: 'MustRunAs'
+  readOnlyRootFilesystem: false
