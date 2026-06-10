@@ -13,7 +13,7 @@
     "ajv-keywords": "^5.1.0",
     "antd": "^5.24.9",
     "axios": "^1.4.0",
-    "chart.js": "^3.9.1",
+    "chart.js": "^4.3.0",
     "date-fns": "4.1.0",
     "leaflet": "^1.9.4",
     "qrcode.react": "^4.2.0",
@@ -28,7 +28,6 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@types/chart.js": "^2.9.41",
     "@types/estree": "^1.0.8",
     "@types/geojson": "^7946.0.16",
     "@types/leaflet": "^1.9.3",
