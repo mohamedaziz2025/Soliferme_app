@@ -407,7 +407,7 @@ const Dashboard = () => {
           color: theme.palette.text.primary,
           font: {
             size: 12,
-            weight: 'bold',
+            weight: 'bold' as const,
           },
         },
       },
